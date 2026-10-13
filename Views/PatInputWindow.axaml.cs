@@ -31,8 +31,8 @@ public partial class PatInputWindow : Window
             return;
         }
         PatText = value;
-        Close(true);
+        OverlayDialog.CloseDialog(this, true);
     }
 
-    private void OnCancelClick(object? sender, RoutedEventArgs e) => Close(false);
+    private void OnCancelClick(object? sender, RoutedEventArgs e) => OverlayDialog.CloseDialog(this, false);
 }

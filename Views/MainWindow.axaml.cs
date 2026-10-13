@@ -27,6 +27,12 @@ public partial class MainWindow : Window
 #endif
         InitializeComponent();
 
+#if ANDROID
+        // Android：挂接覆盖层对话框宿主（单视图平台不支持 Window.ShowDialog）
+        OverlayDialog.Attach(OverlayRoot, OverlayContent);
+        TraeTools.Platform.CrashLog.Boot("MainWindow: overlay attached");
+#endif
+
 #if !ANDROID
         // 桌面端固定窗口尺寸与居中（Android 端为全屏单视图，Width/Height 不适用）
         Width = 1100;
@@ -51,9 +57,9 @@ public partial class MainWindow : Window
 #if !ANDROID
             if (_tickBusy) return;
             _tickBusy = true;
+#endif
             try
             {
-#endif
                 if (DataContext is MainViewModel vm)
                 {
                     await vm.AutoCheckinIfDue();
@@ -61,10 +67,18 @@ public partial class MainWindow : Window
                     await vm.RefreshSnapshotIfNeeded();
 #endif
                 }
-#if !ANDROID
             }
-            finally { _tickBusy = false; }
+            catch (Exception ex)
+            {
+                // 定时任务异常不允许带崩 UI（Android 上 async void 未捕获异常会直接闪退）
+                TraeTools.Platform.CrashLog.Write("AutoCheckin timer tick", ex);
+            }
+            finally
+            {
+#if !ANDROID
+                _tickBusy = false;
 #endif
+            }
         };
 
 #if !ANDROID
@@ -76,6 +90,7 @@ public partial class MainWindow : Window
     protected override void OnOpened(EventArgs e)
     {
         base.OnOpened(e);
+        TraeTools.Platform.CrashLog.Boot("MainWindow.OnOpened");
         OnOpenedEulaCheck();
         // Android 端自动签到仅 App 运行期间有效；无人值守场景请使用「云端签到」
         _autoCheckinTimer.Start();
@@ -169,8 +184,21 @@ public partial class MainWindow : Window
             TraeTools.Services.DataPaths.Root, "eula_accepted");
         if (System.IO.File.Exists(flag)) return;
 
+        TraeTools.Platform.CrashLog.Boot("EULA: showing agreement");
         var eula = new EulaWindow();
-        bool agreed = await eula.ShowDialog<bool>(this);
+        bool agreed;
+        try
+        {
+            // Android：单视图平台走覆盖层；桌面：原生 ShowDialog
+            agreed = await OverlayDialog.ShowAsync<bool>(eula, this);
+        }
+        catch (Exception ex)
+        {
+            // 兜底：Android 上对话框呈现失败则记录并视为同意，保证应用可用（日志留痕）
+            TraeTools.Platform.CrashLog.Write("EULA dialog failed", ex);
+            agreed = true;
+        }
+        TraeTools.Platform.CrashLog.Boot($"EULA: agreed={agreed}");
         if (agreed)
         {
             try

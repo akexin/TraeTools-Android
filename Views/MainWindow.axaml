@@ -88,5 +88,21 @@
         <Border Grid.Column="1" Background="{StaticResource ContentBgBrush}" Padding="28,32">
             <ContentControl Content="{Binding CurrentPage}" />
         </Border>
+
+        <!-- ============ Overlay 对话框宿主 ============ -->
+        <!-- Android 单视图平台不支持再创建 Window（ShowDialog 会失败），
+             模态对话框的内容由 OverlayDialog 借用此覆盖层呈现；桌面端不使用 -->
+        <Panel x:Name="OverlayRoot" IsVisible="False" ZIndex="999">
+            <Border Background="#88000000" />
+            <Border HorizontalAlignment="Stretch" VerticalAlignment="Center"
+                    Margin="24,0" MaxWidth="620"
+                    Background="White" CornerRadius="12"
+                    BorderBrush="#FF334155" BorderThickness="1"
+                    ClipToBounds="True">
+                <ScrollViewer MaxHeight="640">
+                    <ContentPresenter x:Name="OverlayContent" Margin="4" />
+                </ScrollViewer>
+            </Border>
+        </Panel>
     </Grid>
 </Window>

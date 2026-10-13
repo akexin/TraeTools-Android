@@ -85,7 +85,7 @@ public partial class LoginWindow : Window
             var uid = TokenUtils.ParseAccountUid(result.Token);
             if (!string.IsNullOrEmpty(uid)) _account.AccountUid = uid;
             MainViewModel.AppConfig?.Save();
-            Close(true);
+            OverlayDialog.CloseDialog(this, true);
         }
         catch (Exception ex)
         {
@@ -127,8 +127,8 @@ public partial class LoginWindow : Window
         var uid = TokenUtils.ParseAccountUid(pasted);
         if (!string.IsNullOrEmpty(uid)) _account.AccountUid = uid;
         MainViewModel.AppConfig?.Save();
-        Close(true);
+        OverlayDialog.CloseDialog(this, true);
     }
 
-    private void OnCancelClick(object? sender, RoutedEventArgs e) => Close(false);
+    private void OnCancelClick(object? sender, RoutedEventArgs e) => OverlayDialog.CloseDialog(this, false);
 }

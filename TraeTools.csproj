@@ -42,8 +42,8 @@
     <OutputType>Exe</OutputType>
     <SupportedOSPlatformVersion>26</SupportedOSPlatformVersion>
     <ApplicationId>cn.akexin.traetools</ApplicationId>
-    <ApplicationDisplayVersion>1.4.0</ApplicationDisplayVersion>
-    <ApplicationVersion>10</ApplicationVersion>
+    <ApplicationDisplayVersion>1.4.1</ApplicationDisplayVersion>
+    <ApplicationVersion>11</ApplicationVersion>
     <AndroidPackageFormat>apk</AndroidPackageFormat>
     <AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
     <!-- 注意：ApplicationManifest/ApplicationIcon/UseWindowsForms 仅 Windows 条件组定义，

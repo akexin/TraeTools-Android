@@ -28,8 +28,8 @@ public partial class PromptWindow : Window
         }
     }
 
-    private void OnConfirmClick(object? sender, RoutedEventArgs e) => Close(true);
+    private void OnConfirmClick(object? sender, RoutedEventArgs e) => OverlayDialog.CloseDialog(this, true);
 
-    private void OnCancelClick(object? sender, RoutedEventArgs e) => Close(false);
+    private void OnCancelClick(object? sender, RoutedEventArgs e) => OverlayDialog.CloseDialog(this, false);
 }
 

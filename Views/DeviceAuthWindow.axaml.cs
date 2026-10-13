@@ -95,7 +95,7 @@ public partial class DeviceAuthWindow : Window
                 AccessToken = token;
                 _done = true;
                 StatusText.Text = "授权成功 ✓";
-                Close(true);
+                OverlayDialog.CloseDialog(this, true);
                 return;
             }
             if (state == DeviceAuthState.Failed)
@@ -115,7 +115,7 @@ public partial class DeviceAuthWindow : Window
     private void OnCancelClick(object? sender, RoutedEventArgs e)
     {
         _done = true;
-        Close(false);
+        OverlayDialog.CloseDialog(this, false);
     }
 }
 

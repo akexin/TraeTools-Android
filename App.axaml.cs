@@ -21,12 +21,17 @@ public partial class App : Avalonia.Application
 
     public override void OnFrameworkInitializationCompleted()
     {
+        TraeTools.Platform.CrashLog.Install();
+        TraeTools.Platform.CrashLog.Boot(
+            $"App.OnFrameworkInitializationCompleted lifetime={ApplicationLifetime?.GetType().FullName}");
+
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             desktop.MainWindow = new MainWindow
             {
                 DataContext = new MainViewModel(),
             };
+            TraeTools.Platform.CrashLog.Boot("App: desktop MainWindow created");
         }
 #if ANDROID
         else if (ApplicationLifetime is ISingleViewApplicationLifetime singleView)
@@ -36,6 +41,7 @@ public partial class App : Avalonia.Application
             {
                 DataContext = new MainViewModel(),
             };
+            TraeTools.Platform.CrashLog.Boot("App: single-view MainWindow created");
         }
 #endif
 

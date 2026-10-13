@@ -630,7 +630,7 @@ public partial class DashboardViewModel : ViewModelBase
                       ?? cfg?.Accounts.FirstOrDefault();
             if (cfg == null || owner == null || acc == null) return;
             var dlg = new Views.LoginWindow(acc);
-            bool ok = await dlg.ShowDialog<bool>(owner);
+            bool ok = await Views.OverlayDialog.ShowAsync<bool>(dlg, owner);
             if (ok)
             {
                 try { cfg.Save(); } catch { /* 忽略保存失败 */ }

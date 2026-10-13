@@ -20,8 +20,8 @@ public partial class EulaWindow : Window
     }
 
     private void OnAgreeClick(object? sender, RoutedEventArgs e)
-        => Close(true);
+        => OverlayDialog.CloseDialog(this, true);
 
     private void OnDeclineClick(object? sender, RoutedEventArgs e)
-        => Close(false);
+        => OverlayDialog.CloseDialog(this, false);
 }

@@ -37,11 +37,11 @@ public partial class InputWindow : Window
             return;
         }
         ResultText = value;
-        Close(ResultText);
+        OverlayDialog.CloseDialog(this, ResultText);
     }
 
     private void OnCancelClick(object? sender, RoutedEventArgs e)
-        => Close(null);
+        => OverlayDialog.CloseDialog(this, null);
 
     private void OnInputKeyDown(object? sender, KeyEventArgs e)
     {
