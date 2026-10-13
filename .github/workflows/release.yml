@@ -22,7 +22,7 @@ jobs:
       - name: Setup .NET 9
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: "9.0.x"
+          dotnet-version: "10.0.x"
 
       # 发布单文件自包含 exe：应用内更新器（UpdaterService）会下载名为 TraeTools.exe 的资产，
       # 直接覆盖本地 exe 后重启，因此必须产出可独立运行的单文件程序
@@ -97,7 +97,7 @@ jobs:
       - name: Setup .NET 9
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: "9.0.x"
+          dotnet-version: "10.0.x"
 
       - name: Install Android workload
         run: dotnet workload install android

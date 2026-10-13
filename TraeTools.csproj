@@ -3,8 +3,10 @@
     <OutputType>WinExe</OutputType>
     <!-- 双目标：Windows 桌面（win-x64 单文件）+ Android 手机版（apk）。
          2026-10 起同时维护桌面端与移动端，Windows 专属能力（WinForms/WebView2/DPAPI/托盘）
-         均按 TargetFramework 条件编译，Android 端用平台实现替代（见 Platform/ 目录）。 -->
-    <TargetFrameworks>net9.0-windows;net9.0-android</TargetFrameworks>
+         均按 TargetFramework 条件编译，Android 端用平台实现替代（见 Platform/ 目录）。
+         注意：Avalonia 12 系列最低支持 .NET 10（Avalonia.Android 12.1.2 仅提供 net10.0-android36.0），
+         故两端统一使用 .NET 10（LTS）。 -->
+    <TargetFrameworks>net10.0-windows;net10.0-android</TargetFrameworks>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyTitle>TraeTools</AssemblyTitle>
@@ -94,7 +96,7 @@
       <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
     </PackageReference>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.*" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.*" />
     <!-- Android 端 SQLite 原生库（e_sqlite3 的 android arm/arm64/x64/x86 变体；
          Windows 端由 bundle_e_sqlite3 自带，不会重复引入。版本跟随 Microsoft.Data.Sqlite 的 SQLitePCLRaw 传递依赖 -->
     <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3.android" Version="2.1.*" Condition="'$(TargetFramework)' == 'net9.0-android'" />

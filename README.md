@@ -45,7 +45,7 @@ TraeTools 是对 **TRAE-Checkin** 的重构版，并集成了 **Trea-Switch** �
 
 ### 方式二：源码编译
 
-需要 **.NET 9 SDK**（Android 目标需额外安装 workload）：
+需要 **.NET 10 SDK**（Android 目标需额外安装 workload）：
 
 ```bash
 git clone https://github.com/akexin/TraeTools-Android.git
