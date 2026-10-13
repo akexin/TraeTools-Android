@@ -6,7 +6,7 @@
         WindowStartupLocation="CenterOwner"
         CanResize="False" ShowInTaskbar="False"
         MaxWidth="660" MaxHeight="760"
-        Background="White"
+        Background="{DynamicResource CardBgBrush}"
         FontFamily="Microsoft YaHei UI,Segoe UI">
     <!-- 桌面端对话框承载窗口：所有对话框实际内容是 UserControl（Android 单视图平台
          不允许创建 Window），桌面端由本窗口包一层后 ShowDialog。 -->

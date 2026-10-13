@@ -5,10 +5,10 @@
         mc:Ignorable="d" d:DesignWidth="620" d:DesignHeight="600"
         x:Class="TraeTools.Views.EulaWindow"
         Width="620" MaxHeight="620"
-        Background="White"
+        Background="{DynamicResource CardBgBrush}"
         FontFamily="Microsoft YaHei UI,Segoe UI">
 
-    <Grid RowDefinitions="Auto,*,Auto" Background="White">
+    <Grid RowDefinitions="Auto,*,Auto" Background="{DynamicResource CardBgBrush}">
 
         <!-- 标题区 -->
         <Border Grid.Row="0" Background="#FFF9FAFB" BorderBrush="#FFE2E8F0" BorderThickness="0,0,0,1" Padding="16,14">

@@ -32,6 +32,25 @@ public partial class SettingsViewModel : ViewModelBase
     [ObservableProperty]
     private bool _minimizeToTray = true;
 
+    /// <summary>深色模式：切换立即应用全局主题并持久化到 AppConfig（App.ApplyTheme）。</summary>
+    [ObservableProperty]
+    private bool _darkModeEnabled;
+
+    partial void OnDarkModeEnabledChanged(bool value)
+    {
+        try
+        {
+            App.ApplyTheme(value);
+            var cfg = MainViewModel.AppConfig;
+            if (cfg != null && cfg.DarkMode != value)
+            {
+                cfg.DarkMode = value;
+                cfg.Save();
+            }
+        }
+        catch { /* 主题应用/保存失败不影响其它设置 */ }
+    }
+
     [ObservableProperty]
     private string _tokenString = "（未登录）";
 
@@ -92,6 +111,9 @@ public partial class SettingsViewModel : ViewModelBase
 
     public ObservableCollection<AccountInfo> Accounts { get; } = new();
 
+    /// <summary>是否没有账号：驱动账号管理卡空状态（插画 + 去添加按钮）。</summary>
+    public bool HasNoAccounts => Accounts.Count == 0;
+
     /// <summary>账号管理中当前选中的账号（联动 Token 面板显示对应凭证）。</summary>
     [ObservableProperty]
     private AccountInfo? _selectedAccount;
@@ -107,6 +129,9 @@ public partial class SettingsViewModel : ViewModelBase
 
     public SettingsViewModel()
     {
+        // 账号增删时刷新空状态标记
+        Accounts.CollectionChanged += (_, __) => OnPropertyChanged(nameof(HasNoAccounts));
+
         // 从 AutoStartManager 读取开机自启状态
         try
         {
@@ -129,6 +154,7 @@ public partial class SettingsViewModel : ViewModelBase
                 AutoCheckinTime = cfg.AutoCheckinTime;
                 CheckinIntervalSeconds = Math.Clamp(cfg.CheckinIntervalSeconds > 0 ? cfg.CheckinIntervalSeconds : 5, 1, 60);
                 MinimizeToTray = cfg.MinimizeToTray;
+                DarkModeEnabled = cfg.DarkMode;
 
                 var acc = cfg.Accounts.FirstOrDefault(a => a.Id == cfg.ActiveAccountId)
                           ?? cfg.Accounts.FirstOrDefault();
