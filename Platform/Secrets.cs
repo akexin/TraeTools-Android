@@ -25,6 +25,6 @@ internal static partial class Secrets
         return UnprotectCore(enc);
     }
 
-    static partial string? ProtectCore(string plain);
-    static partial string? UnprotectCore(string enc);
+    private static partial string? ProtectCore(string plain);
+    private static partial string? UnprotectCore(string enc);
 }

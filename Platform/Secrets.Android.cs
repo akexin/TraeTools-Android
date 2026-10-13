@@ -18,7 +18,7 @@ internal static partial class Secrets
     private const int NonceSize = 12;   // AES-GCM 推荐 nonce 长度
     private const int TagSize = 16;     // 128-bit 认证标签
 
-    static partial string? ProtectCore(string plain)
+    private static partial string? ProtectCore(string plain)
     {
         try
         {
@@ -50,7 +50,7 @@ internal static partial class Secrets
         catch { return null; }
     }
 
-    static partial string? UnprotectCore(string enc)
+    private static partial string? UnprotectCore(string enc)
     {
         try
         {
