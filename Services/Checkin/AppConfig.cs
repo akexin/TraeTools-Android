@@ -45,6 +45,8 @@ public class AppConfig
     public bool StarAskedAfterDeploy { get; set; }
     /// <summary>关闭主窗口时是否最小化到系统托盘（托盘驻留）。</summary>
     public bool MinimizeToTray { get; set; } = true;
+    /// <summary>深色模式：true 时启动即应用暗色主题（设置页可实时切换）。</summary>
+    public bool DarkMode { get; set; }
 
     private static string ConfigDir => TraeTools.Services.DataPaths.Root;
 

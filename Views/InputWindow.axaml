@@ -5,9 +5,9 @@
         mc:Ignorable="d" d:DesignWidth="480"
         x:Class="TraeTools.Views.InputWindow"
         Width="480" MaxWidth="620"
-        Background="White"
+        Background="{DynamicResource CardBgBrush}"
         FontFamily="Microsoft YaHei UI,Segoe UI">
-    <Grid RowDefinitions="Auto,Auto,Auto,Auto" Background="White">
+    <Grid RowDefinitions="Auto,Auto,Auto,Auto" Background="{DynamicResource CardBgBrush}">
         <Border Grid.Row="0" Background="#FFF9FAFB" BorderBrush="#FFE2E8F0" BorderThickness="0,0,0,1" Padding="16,12">
             <TextBlock x:Name="TitleText" Text="输入" FontSize="14" FontWeight="Bold" Foreground="#FF0F172A" />
         </Border>

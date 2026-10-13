@@ -1,189 +1,426 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
+    <!--
+    ============================================================================
+      TraeTools 设计令牌（Design Tokens）
+      - 所有语义色按 Light / Dark 双主题定义，组件样式一律 DynamicResource 引用，
+        切换 Application.RequestedThemeVariant 即全局生效。
+      - 主色：靛蓝 #335CFF → 紫 #8E3FF0 品牌渐变；中性灰阶区分文本层级；
+        状态色降饱和（Success/Warning/Danger）。
+      - 圆角体系：卡片 16 / 按钮·输入 12 / 小徽章 999；卡片带极轻投影浮起。
+    ============================================================================
+    -->
     <Styles.Resources>
-        <!-- ========== Color Resources (ARGB) ========== -->
-        <Color x:Key="SidebarBg">#FF1E293B</Color>
-        <Color x:Key="Accent">#FF3B82F6</Color>
-        <Color x:Key="AccentSoft">#1A3B82F6</Color>
-        <Color x:Key="ContentBg">#FFF1F5F9</Color>
-        <Color x:Key="CardBg">#FFFFFFFF</Color>
-        <Color x:Key="TextMain">#FF0F172A</Color>
-        <Color x:Key="TextMuted">#FF64748B</Color>
-        <Color x:Key="TextSub">#FF94A3B8</Color>
-        <Color x:Key="BorderColor">#FFE2E8F0</Color>
-        <Color x:Key="Success">#FF10B981</Color>
-        <Color x:Key="Warning">#FFF59E0B</Color>
-        <Color x:Key="Danger">#FFEF4444</Color>
-        <Color x:Key="HeroDark">#FF1E293B</Color>
-        <Color x:Key="HeroDark2">#FF334155</Color>
+        <ResourceDictionary>
 
-        <!-- ========== Brush Resources ========== -->
-        <SolidColorBrush x:Key="SidebarBgBrush" Color="{StaticResource SidebarBg}" />
-        <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource Accent}" />
-        <SolidColorBrush x:Key="AccentSoftBrush" Color="{StaticResource AccentSoft}" />
-        <SolidColorBrush x:Key="ContentBgBrush" Color="{StaticResource ContentBg}" />
-        <SolidColorBrush x:Key="CardBgBrush" Color="{StaticResource CardBg}" />
-        <SolidColorBrush x:Key="TextMainBrush" Color="{StaticResource TextMain}" />
-        <SolidColorBrush x:Key="TextMutedBrush" Color="{StaticResource TextMuted}" />
-        <SolidColorBrush x:Key="TextSubBrush" Color="{StaticResource TextSub}" />
-        <SolidColorBrush x:Key="BorderBrushKey" Color="{StaticResource BorderColor}" />
-        <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource Success}" />
-        <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource Warning}" />
-        <SolidColorBrush x:Key="DangerBrush" Color="{StaticResource Danger}" />
-        <SolidColorBrush x:Key="WhiteBrush" Color="White" />
-        <SolidColorBrush x:Key="HeroDarkBrush" Color="{StaticResource HeroDark}" />
-        <SolidColorBrush x:Key="HeroDark2Brush" Color="{StaticResource HeroDark2}" />
+            <!-- ========== 固定资源（不随主题变化） ========== -->
+            <Color x:Key="SidebarBg">#FF1B2334</Color>
+            <SolidColorBrush x:Key="SidebarBgBrush" Color="{StaticResource SidebarBg}" />
+            <SolidColorBrush x:Key="WhiteBrush" Color="White" />
+
+            <ResourceDictionary.ThemeDictionaries>
+                <!-- ================= 明亮主题 ================= -->
+                <ResourceDictionary x:Key="Light">
+                    <!-- 主色与渐变 -->
+                    <Color x:Key="Accent">#FF335CFF</Color>
+                    <Color x:Key="AccentHover">#FF4A6DFF</Color>
+                    <Color x:Key="AccentDeep">#FF2748DB</Color>
+                    <Color x:Key="AccentSoft">#1A335CFF</Color>
+                    <Color x:Key="Violet">#FF8E3FF0</Color>
+                    <!-- 中性面板 -->
+                    <Color x:Key="ContentBg">#FFF4F6FB</Color>
+                    <Color x:Key="CardBg">#FFFFFFFF</Color>
+                    <Color x:Key="RowBg">#FFF7F9FC</Color>
+                    <Color x:Key="BorderColor">#FFE9EDF4</Color>
+                    <!-- 文本层级：主 / 次 / 弱 -->
+                    <Color x:Key="TextMain">#FF121A2E</Color>
+                    <Color x:Key="TextMuted">#FF5C6779</Color>
+                    <Color x:Key="TextSub">#FF98A2B3</Color>
+                    <!-- 状态色（低饱和） -->
+                    <Color x:Key="Success">#FF22A06B</Color>
+                    <Color x:Key="SuccessSoft">#1A22A06B</Color>
+                    <Color x:Key="Warning">#FFE08A00</Color>
+                    <Color x:Key="WarningSoft">#1AE08A00</Color>
+                    <Color x:Key="Danger">#FFE5484D</Color>
+                    <Color x:Key="DangerSoft">#1AE5484D</Color>
+                    <!-- 状态条（琥珀） -->
+                    <Color x:Key="StatusWarnBg">#FFFBF5EB</Color>
+                    <Color x:Key="StatusWarnBorder">#FFE7C99B</Color>
+                    <Color x:Key="StatusWarnFg">#FF92400E</Color>
+                    <!-- 代码框 / 交互着色 -->
+                    <Color x:Key="CodeBg">#FF101828</Color>
+                    <Color x:Key="CodeText">#FF22D3EE</Color>
+                    <Color x:Key="HoverTint">#0F335CFF</Color>
+                    <Color x:Key="SelectedTint">#1F335CFF</Color>
+                    <!-- 桌面端旧 Hero 深色（保留兼容） -->
+                    <Color x:Key="HeroDark">#FF1E293B</Color>
+                    <Color x:Key="HeroDark2">#FF334155</Color>
+
+                    <!-- 画刷 -->
+                    <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource Accent}" />
+                    <SolidColorBrush x:Key="AccentHoverBrush" Color="{StaticResource AccentHover}" />
+                    <SolidColorBrush x:Key="AccentDeepBrush" Color="{StaticResource AccentDeep}" />
+                    <SolidColorBrush x:Key="AccentSoftBrush" Color="{StaticResource AccentSoft}" />
+                    <SolidColorBrush x:Key="VioletBrush" Color="{StaticResource Violet}" />
+                    <SolidColorBrush x:Key="ContentBgBrush" Color="{StaticResource ContentBg}" />
+                    <SolidColorBrush x:Key="CardBgBrush" Color="{StaticResource CardBg}" />
+                    <SolidColorBrush x:Key="RowBgBrush" Color="{StaticResource RowBg}" />
+                    <SolidColorBrush x:Key="BorderBrushKey" Color="{StaticResource BorderColor}" />
+                    <SolidColorBrush x:Key="TextMainBrush" Color="{StaticResource TextMain}" />
+                    <SolidColorBrush x:Key="TextMutedBrush" Color="{StaticResource TextMuted}" />
+                    <SolidColorBrush x:Key="TextSubBrush" Color="{StaticResource TextSub}" />
+                    <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource Success}" />
+                    <SolidColorBrush x:Key="SuccessSoftBrush" Color="{StaticResource SuccessSoft}" />
+                    <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource Warning}" />
+                    <SolidColorBrush x:Key="WarningSoftBrush" Color="{StaticResource WarningSoft}" />
+                    <SolidColorBrush x:Key="DangerBrush" Color="{StaticResource Danger}" />
+                    <SolidColorBrush x:Key="DangerSoftBrush" Color="{StaticResource DangerSoft}" />
+                    <SolidColorBrush x:Key="StatusWarnBgBrush" Color="{StaticResource StatusWarnBg}" />
+                    <SolidColorBrush x:Key="StatusWarnBorderBrush" Color="{StaticResource StatusWarnBorder}" />
+                    <SolidColorBrush x:Key="StatusWarnFgBrush" Color="{StaticResource StatusWarnFg}" />
+                    <SolidColorBrush x:Key="CodeBgBrush" Color="{StaticResource CodeBg}" />
+                    <SolidColorBrush x:Key="CodeTextBrush" Color="{StaticResource CodeText}" />
+                    <SolidColorBrush x:Key="HoverTintBrush" Color="{StaticResource HoverTint}" />
+                    <SolidColorBrush x:Key="SelectedTintBrush" Color="{StaticResource SelectedTint}" />
+                    <SolidColorBrush x:Key="HeroDarkBrush" Color="{StaticResource HeroDark}" />
+                    <SolidColorBrush x:Key="HeroDark2Brush" Color="{StaticResource HeroDark2}" />
+                    <!-- 品牌渐变（签到 Hero / 仪表盘 Hero / 主按钮强调场景） -->
+                    <LinearGradientBrush x:Key="BrandHeroBrush" StartPoint="0%,0%" EndPoint="100%,100%">
+                        <GradientStop Color="#FF2D5BFF" Offset="0" />
+                        <GradientStop Color="#FF6647F0" Offset="0.55" />
+                        <GradientStop Color="#FF8E3FF0" Offset="1" />
+                    </LinearGradientBrush>
+                    <!-- 趋势图面积填充 -->
+                    <LinearGradientBrush x:Key="ChartAreaBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Color="#59335CFF" Offset="0" />
+                        <GradientStop Color="#0A335CFF" Offset="1" />
+                    </LinearGradientBrush>
+                    <!-- 渐变主按钮 -->
+                    <LinearGradientBrush x:Key="BrandButtonBrush" StartPoint="0%,0%" EndPoint="100%,100%">
+                        <GradientStop Color="#FF2D5BFF" Offset="0" />
+                        <GradientStop Color="#FF8E3FF0" Offset="1" />
+                    </LinearGradientBrush>
+                </ResourceDictionary>
+
+                <!-- ================= 暗色主题 ================= -->
+                <ResourceDictionary x:Key="Dark">
+                    <Color x:Key="Accent">#FF7C93FF</Color>
+                    <Color x:Key="AccentHover">#FF8DA0FF</Color>
+                    <Color x:Key="AccentDeep">#FF5F78F0</Color>
+                    <Color x:Key="AccentSoft">#337C93FF</Color>
+                    <Color x:Key="Violet">#FFB07CFF</Color>
+                    <Color x:Key="ContentBg">#FF0F1420</Color>
+                    <Color x:Key="CardBg">#FF181F30</Color>
+                    <Color x:Key="RowBg">#FF1E2740</Color>
+                    <Color x:Key="BorderColor">#FF273046</Color>
+                    <Color x:Key="TextMain">#FFEDF1FA</Color>
+                    <Color x:Key="TextMuted">#FFA6B0C3</Color>
+                    <Color x:Key="TextSub">#FF6D7994</Color>
+                    <Color x:Key="Success">#FF4CC491</Color>
+                    <Color x:Key="SuccessSoft">#264CC491</Color>
+                    <Color x:Key="Warning">#FFF0A64B</Color>
+                    <Color x:Key="WarningSoft">#26F0A64B</Color>
+                    <Color x:Key="Danger">#FFFF7079</Color>
+                    <Color x:Key="DangerSoft">#26FF7079</Color>
+                    <Color x:Key="StatusWarnBg">#33E0A64B</Color>
+                    <Color x:Key="StatusWarnBorder">#4DE0A64B</Color>
+                    <Color x:Key="StatusWarnFg">#FFF0C36A</Color>
+                    <Color x:Key="CodeBg">#FF0B101C</Color>
+                    <Color x:Key="CodeText">#FF67E8F9</Color>
+                    <Color x:Key="HoverTint">#267C93FF</Color>
+                    <Color x:Key="SelectedTint">#407C93FF</Color>
+                    <Color x:Key="HeroDark">#FF151B2A</Color>
+                    <Color x:Key="HeroDark2">#FF232C44</Color>
+
+                    <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource Accent}" />
+                    <SolidColorBrush x:Key="AccentHoverBrush" Color="{StaticResource AccentHover}" />
+                    <SolidColorBrush x:Key="AccentDeepBrush" Color="{StaticResource AccentDeep}" />
+                    <SolidColorBrush x:Key="AccentSoftBrush" Color="{StaticResource AccentSoft}" />
+                    <SolidColorBrush x:Key="VioletBrush" Color="{StaticResource Violet}" />
+                    <SolidColorBrush x:Key="ContentBgBrush" Color="{StaticResource ContentBg}" />
+                    <SolidColorBrush x:Key="CardBgBrush" Color="{StaticResource CardBg}" />
+                    <SolidColorBrush x:Key="RowBgBrush" Color="{StaticResource RowBg}" />
+                    <SolidColorBrush x:Key="BorderBrushKey" Color="{StaticResource BorderColor}" />
+                    <SolidColorBrush x:Key="TextMainBrush" Color="{StaticResource TextMain}" />
+                    <SolidColorBrush x:Key="TextMutedBrush" Color="{StaticResource TextMuted}" />
+                    <SolidColorBrush x:Key="TextSubBrush" Color="{StaticResource TextSub}" />
+                    <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource Success}" />
+                    <SolidColorBrush x:Key="SuccessSoftBrush" Color="{StaticResource SuccessSoft}" />
+                    <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource Warning}" />
+                    <SolidColorBrush x:Key="WarningSoftBrush" Color="{StaticResource WarningSoft}" />
+                    <SolidColorBrush x:Key="DangerBrush" Color="{StaticResource Danger}" />
+                    <SolidColorBrush x:Key="DangerSoftBrush" Color="{StaticResource DangerSoft}" />
+                    <SolidColorBrush x:Key="StatusWarnBgBrush" Color="{StaticResource StatusWarnBg}" />
+                    <SolidColorBrush x:Key="StatusWarnBorderBrush" Color="{StaticResource StatusWarnBorder}" />
+                    <SolidColorBrush x:Key="StatusWarnFgBrush" Color="{StaticResource StatusWarnFg}" />
+                    <SolidColorBrush x:Key="CodeBgBrush" Color="{StaticResource CodeBg}" />
+                    <SolidColorBrush x:Key="CodeTextBrush" Color="{StaticResource CodeText}" />
+                    <SolidColorBrush x:Key="HoverTintBrush" Color="{StaticResource HoverTint}" />
+                    <SolidColorBrush x:Key="SelectedTintBrush" Color="{StaticResource SelectedTint}" />
+                    <SolidColorBrush x:Key="HeroDarkBrush" Color="{StaticResource HeroDark}" />
+                    <SolidColorBrush x:Key="HeroDark2Brush" Color="{StaticResource HeroDark2}" />
+                    <LinearGradientBrush x:Key="BrandHeroBrush" StartPoint="0%,0%" EndPoint="100%,100%">
+                        <GradientStop Color="#FF3B54E8" Offset="0" />
+                        <GradientStop Color="#FF7C4CE0" Offset="0.55" />
+                        <GradientStop Color="#FFA855F7" Offset="1" />
+                    </LinearGradientBrush>
+                    <LinearGradientBrush x:Key="ChartAreaBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Color="#597C93FF" Offset="0" />
+                        <GradientStop Color="#0A7C93FF" Offset="1" />
+                    </LinearGradientBrush>
+                    <LinearGradientBrush x:Key="BrandButtonBrush" StartPoint="0%,0%" EndPoint="100%,100%">
+                        <GradientStop Color="#FF3B54E8" Offset="0" />
+                        <GradientStop Color="#FFA855F7" Offset="1" />
+                    </LinearGradientBrush>
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+        </ResourceDictionary>
     </Styles.Resources>
 
-    <!-- ========== Card Style ========== -->
+    <!-- ========== 卡片：16px 大圆角 + 极轻投影浮起 ========== -->
     <Style Selector="Border.card">
-        <Setter Property="Background" Value="{StaticResource CardBgBrush}" />
-        <Setter Property="BorderBrush" Value="{StaticResource BorderBrushKey}" />
+        <Setter Property="Background" Value="{DynamicResource CardBgBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrushKey}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="14" />
-        <Setter Property="Padding" Value="22" />
+        <Setter Property="CornerRadius" Value="16" />
+        <Setter Property="Padding" Value="20" />
+        <Setter Property="BoxShadow" Value="0 2 8 0 #0F121A2E" />
     </Style>
 
-    <!-- ========== Panel Style ========== -->
+    <!-- Hero 卡：品牌渐变底，无边框，蓝紫投影 -->
+    <Style Selector="Border.card-hero">
+        <Setter Property="Background" Value="{DynamicResource BrandHeroBrush}" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="16" />
+        <Setter Property="Padding" Value="22,20" />
+        <Setter Property="BoxShadow" Value="0 6 20 0 #2E2D5BFF" />
+    </Style>
+
+    <!-- ========== 次级面板 ========== -->
     <Style Selector="Border.panel">
-        <Setter Property="Background" Value="{StaticResource CardBgBrush}" />
-        <Setter Property="BorderBrush" Value="{StaticResource BorderBrushKey}" />
+        <Setter Property="Background" Value="{DynamicResource CardBgBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrushKey}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="14" />
+        <Setter Property="CornerRadius" Value="16" />
         <Setter Property="Padding" Value="18" />
     </Style>
 
-    <!-- ========== Primary Button Style ========== -->
+    <!-- ========== 按钮通用：12px 圆角 + 按压缩放反馈 ========== -->
+    <Style Selector="Button.btn-primary, Button.btn, Button.btn-danger, Button.btn-ghost">
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="RenderTransform" Value="none" />
+        <Setter Property="Transitions">
+            <Transitions>
+                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.08" />
+            </Transitions>
+        </Setter>
+    </Style>
+    <Style Selector="Button.btn-primary:pressed, Button.btn:pressed, Button.btn-danger:pressed, Button.btn-ghost:pressed">
+        <Setter Property="RenderTransform" Value="scale(0.97)" />
+    </Style>
+
+    <!-- 主按钮：品牌蓝 -->
     <Style Selector="Button.btn-primary">
-        <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+        <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
         <Setter Property="Foreground" Value="White" />
         <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="CornerRadius" Value="10" />
-        <Setter Property="Padding" Value="20,10" />
+        <Setter Property="CornerRadius" Value="12" />
+        <Setter Property="Padding" Value="20,11" />
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="FontSize" Value="13" />
+        <Setter Property="MinHeight" Value="38" />
+    </Style>
+    <Style Selector="Button.btn-primary:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}" />
+    </Style>
+    <Style Selector="Button.btn-primary:pressed /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource AccentDeepBrush}" />
     </Style>
 
-    <!-- ========== Danger Button Style（需重登/警示操作） ========== -->
+    <!-- 渐变强调按钮（签到 / 一键部署等核心 CTA） -->
+    <Style Selector="Button.btn-hero">
+        <Setter Property="Background" Value="{DynamicResource BrandButtonBrush}" />
+        <Setter Property="Foreground" Value="White" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="12" />
+        <Setter Property="Padding" Value="22,11" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="MinHeight" Value="38" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="RenderTransform" Value="none" />
+        <Setter Property="Transitions">
+            <Transitions>
+                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.08" />
+            </Transitions>
+        </Setter>
+    </Style>
+    <Style Selector="Button.btn-hero:pointerover /template/ ContentPresenter">
+        <Setter Property="Opacity" Value="0.92" />
+    </Style>
+    <Style Selector="Button.btn-hero:pressed">
+        <Setter Property="RenderTransform" Value="scale(0.97)" />
+    </Style>
+
+    <!-- 危险按钮（需重登/警示操作） -->
     <Style Selector="Button.btn-danger">
-        <Setter Property="Background" Value="#EF4444" />
+        <Setter Property="Background" Value="{DynamicResource DangerBrush}" />
         <Setter Property="Foreground" Value="White" />
         <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="CornerRadius" Value="10" />
-        <Setter Property="Padding" Value="16,9" />
+        <Setter Property="CornerRadius" Value="12" />
+        <Setter Property="Padding" Value="16,10" />
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="FontSize" Value="13" />
+        <Setter Property="MinHeight" Value="36" />
+    </Style>
+    <Style Selector="Button.btn-danger:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="#FFEF6B6E" />
     </Style>
 
-    <!-- ========== Default Button Style ========== -->
+    <!-- 默认按钮 -->
     <Style Selector="Button.btn">
-        <Setter Property="Background" Value="{StaticResource CardBgBrush}" />
-        <Setter Property="Foreground" Value="{StaticResource TextMainBrush}" />
-        <Setter Property="BorderBrush" Value="{StaticResource BorderBrushKey}" />
+        <Setter Property="Background" Value="{DynamicResource CardBgBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource TextMainBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrushKey}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="10" />
-        <Setter Property="Padding" Value="16,9" />
+        <Setter Property="CornerRadius" Value="12" />
+        <Setter Property="Padding" Value="16,10" />
         <Setter Property="FontSize" Value="13" />
+        <Setter Property="MinHeight" Value="36" />
+    </Style>
+    <Style Selector="Button.btn:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource RowBgBrush}" />
     </Style>
 
-    <!-- ========== Ghost Button Style ========== -->
+    <!-- Ghost 按钮 -->
     <Style Selector="Button.btn-ghost">
         <Setter Property="Background" Value="Transparent" />
-        <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
         <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="CornerRadius" Value="10" />
         <Setter Property="Padding" Value="10,6" />
         <Setter Property="FontSize" Value="12" />
     </Style>
+    <Style Selector="Button.btn-ghost:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource HoverTintBrush}" />
+    </Style>
 
-    <!-- ========== Badge Styles ========== -->
+    <!-- ========== 徽章：去边框、纯色淡底，更轻 ========== -->
     <Style Selector="Border.badge-ok">
-        <Setter Property="Background" Value="#1A10B981" />
-        <Setter Property="BorderBrush" Value="{StaticResource SuccessBrush}" />
-        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Background" Value="{DynamicResource SuccessSoftBrush}" />
         <Setter Property="CornerRadius" Value="999" />
         <Setter Property="Padding" Value="10,3" />
     </Style>
     <Style Selector="Border.badge-warn">
-        <Setter Property="Background" Value="#1AF59E0B" />
-        <Setter Property="BorderBrush" Value="{StaticResource WarningBrush}" />
-        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Background" Value="{DynamicResource WarningSoftBrush}" />
         <Setter Property="CornerRadius" Value="999" />
         <Setter Property="Padding" Value="10,3" />
     </Style>
     <Style Selector="Border.badge-info">
-        <Setter Property="Background" Value="#1A3B82F6" />
-        <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
-        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
         <Setter Property="CornerRadius" Value="999" />
         <Setter Property="Padding" Value="10,3" />
     </Style>
     <Style Selector="Border.badge-danger">
-        <Setter Property="Background" Value="#1AEF4444" />
-        <Setter Property="BorderBrush" Value="{StaticResource DangerBrush}" />
-        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Background" Value="{DynamicResource DangerSoftBrush}" />
         <Setter Property="CornerRadius" Value="999" />
         <Setter Property="Padding" Value="10,3" />
     </Style>
 
-    <!-- ========== Navigation Item ========== -->
+    <!-- ========== 侧栏导航（桌面） ========== -->
     <Style Selector="Button.nav-item">
         <Setter Property="Background" Value="Transparent" />
-        <Setter Property="Foreground" Value="{StaticResource TextSubBrush}" />
+        <Setter Property="Foreground" Value="#FF8CA0B8" />
         <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="CornerRadius" Value="12" />
         <Setter Property="Padding" Value="14,11" />
         <Setter Property="FontSize" Value="13" />
         <Setter Property="HorizontalAlignment" Value="Stretch" />
         <Setter Property="HorizontalContentAlignment" Value="Left" />
         <Setter Property="FontWeight" Value="Normal" />
+        <Setter Property="Cursor" Value="Hand" />
     </Style>
     <Style Selector="Button.nav-item:pointerover /template/ ContentPresenter">
         <Setter Property="Background" Value="#22FFFFFF" />
         <Setter Property="TextElement.Foreground" Value="White" />
     </Style>
     <Style Selector="Button.nav-item-active">
-        <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+        <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
         <Setter Property="Foreground" Value="White" />
         <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="CornerRadius" Value="12" />
         <Setter Property="Padding" Value="14,11" />
         <Setter Property="FontSize" Value="13" />
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="HorizontalAlignment" Value="Stretch" />
         <Setter Property="HorizontalContentAlignment" Value="Left" />
     </Style>
+    <Style Selector="Button.nav-item-active:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}" />
+    </Style>
 
-    <!-- ========== Page Title ========== -->
+    <!-- ========== 页面标题 ========== -->
     <Style Selector="TextBlock.page-title">
         <Setter Property="FontSize" Value="22" />
         <Setter Property="FontWeight" Value="Bold" />
-        <Setter Property="Foreground" Value="{StaticResource TextMainBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource TextMainBrush}" />
     </Style>
     <Style Selector="TextBlock.page-subtitle">
         <Setter Property="FontSize" Value="12" />
-        <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
     </Style>
     <Style Selector="TextBlock.card-title">
         <Setter Property="FontSize" Value="13" />
         <Setter Property="FontWeight" Value="SemiBold" />
-        <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
     </Style>
+    <!-- 核心数据：放大加粗，成为视觉焦点 -->
     <Style Selector="TextBlock.card-value">
-        <Setter Property="FontSize" Value="26" />
-        <Setter Property="FontWeight" Value="Bold" />
-        <Setter Property="Foreground" Value="{StaticResource TextMainBrush}" />
+        <Setter Property="FontSize" Value="30" />
+        <Setter Property="FontWeight" Value="ExtraBold" />
+        <Setter Property="Foreground" Value="{DynamicResource TextMainBrush}" />
+    </Style>
+    <Style Selector="TextBlock.value-hero">
+        <Setter Property="FontSize" Value="36" />
+        <Setter Property="FontWeight" Value="ExtraBold" />
+        <Setter Property="Foreground" Value="White" />
+    </Style>
+    <Style Selector="TextBlock.text-caption">
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="Foreground" Value="{DynamicResource TextSubBrush}" />
     </Style>
 
-    <!-- ========== Code Box ========== -->
+    <!-- ========== 空状态 ========== -->
+    <Style Selector="TextBlock.empty-title">
+        <Setter Property="FontSize" Value="15" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{DynamicResource TextMainBrush}" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="TextBlock.empty-desc">
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Foreground" Value="{DynamicResource TextSubBrush}" />
+        <Setter Property="TextAlignment" Value="Center" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+        <Setter Property="MaxWidth" Value="260" />
+    </Style>
+
+    <!-- ========== 代码框 ========== -->
     <Style Selector="Border.code-box">
-        <Setter Property="Background" Value="#FF0F172A" />
-        <Setter Property="CornerRadius" Value="10" />
-        <Setter Property="Padding" Value="14,12" />
+        <Setter Property="Background" Value="{DynamicResource CodeBgBrush}" />
+        <Setter Property="CornerRadius" Value="14" />
+        <Setter Property="Padding" Value="16,14" />
     </Style>
 
-    <!-- ========== Default Window Font ========== -->
+    <!-- ========== 输入框：统一 12px 圆角 + 舒适高度 ========== -->
+    <Style Selector="TextBox">
+        <Setter Property="CornerRadius" Value="12" />
+        <Setter Property="MinHeight" Value="36" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+
+    <!-- ========== 默认 Window 字体 ========== -->
     <Style Selector="Window">
         <Setter Property="FontFamily" Value="Inter,Microsoft YaHei UI,Segoe UI" />
     </Style>

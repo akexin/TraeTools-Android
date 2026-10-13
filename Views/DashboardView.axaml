@@ -14,31 +14,32 @@
     <UserControl.Styles>
         <!-- 账号概览卡片：预占 1.5 边框高度，当前激活账号用高亮粗边框框出 -->
         <Style Selector="Border.acct-card">
-            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="CornerRadius" Value="12" />
             <Setter Property="BorderThickness" Value="1.5" />
             <Setter Property="BorderBrush" Value="Transparent" />
         </Style>
         <Style Selector="Border.acct-card.acct-active">
-            <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
-            <Setter Property="Background" Value="#1A3B82F6" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
         </Style>
         <!-- 账号概览按钮：透明无阴影，悬停时铺满整张卡片（与外框圆角一致） -->
         <Style Selector="Button.acct-card">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="CornerRadius" Value="12" />
             <Setter Property="Padding" Value="0" />
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
             <Setter Property="VerticalAlignment" Value="Stretch" />
+            <Setter Property="Cursor" Value="Hand" />
         </Style>
         <Style Selector="Button.acct-card /template/ ContentPresenter">
-            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="CornerRadius" Value="12" />
         </Style>
         <Style Selector="Button.acct-card:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="#103B82F6" />
+            <Setter Property="Background" Value="{DynamicResource HoverTintBrush}" />
         </Style>
         <Style Selector="Button.acct-card:pressed /template/ ContentPresenter">
-            <Setter Property="Background" Value="#1A3B82F6" />
+            <Setter Property="Background" Value="{DynamicResource SelectedTintBrush}" />
         </Style>
     </UserControl.Styles>
 
@@ -68,7 +69,7 @@
                         </Grid>
                         <StackPanel VerticalAlignment="Center" Spacing="2">
                             <TextBlock Text="{Binding CurrentAccountInfo.Name}" FontSize="15" FontWeight="SemiBold" />
-                            <TextBlock Text="当前账号" FontSize="11" Foreground="{StaticResource TextMutedBrush}" />
+                            <TextBlock Text="当前账号" Classes="text-caption" />
                         </StackPanel>
                     </StackPanel>
                 </StackPanel>
@@ -76,50 +77,64 @@
                     <Button Classes="btn" Content="刷新状态" Command="{Binding RefreshStatusCommand}" />
                     <Button Classes="btn-danger" Content="重新登录" Command="{Binding ReloginCommand}"
                         IsVisible="{Binding NeedLogin}" />
-                    <Button Classes="btn-primary" Content="立即签到" Command="{Binding QuickCheckinCommand}"
+                    <Button Classes="btn-hero" Content="立即签到" Command="{Binding QuickCheckinCommand}"
                             IsEnabled="{Binding CanQuickCheckin}" />
                 </StackPanel>
             </Grid>
 
-            <!-- ===== 3 Stat Cards ===== -->
-            <Grid ColumnDefinitions="*,*,*" Margin="0,4,0,0">
-                <Border Grid.Column="0" Classes="card" Margin="0,0,10,0">
-                    <StackPanel Spacing="8">
-                        <TextBlock Text="剩余积分" Classes="card-title" />
+            <!-- ===== 未登录空状态：插画式提示 + 明确行动按钮 ===== -->
+            <Border Classes="card" IsVisible="{Binding NeedLogin}" Margin="0,4,0,0" Padding="18">
+                <Grid ColumnDefinitions="Auto,*,Auto">
+                    <Border Grid.Column="0" Width="46" Height="46" CornerRadius="23"
+                            Background="{DynamicResource WarningSoftBrush}" VerticalAlignment="Center">
+                        <PathIcon Width="22" Height="22" Foreground="{DynamicResource WarningBrush}"
+                                  Data="M1 21h22L12 2 1 21zM11 10h2v5h-2zM11 17h2v2h-2z" />
+                    </Border>
+                    <StackPanel Grid.Column="1" Spacing="3" Margin="14,0" VerticalAlignment="Center">
+                        <TextBlock Text="账号未登录或凭证已失效" Classes="empty-title" HorizontalAlignment="Left" />
+                        <TextBlock Text="重新登录后即可同步剩余积分与签到状态" Classes="empty-desc" HorizontalAlignment="Left"
+                                   TextAlignment="Left" MaxWidth="360" />
+                    </StackPanel>
+                    <Button Grid.Column="2" Classes="btn-primary" Content="去登录" Command="{Binding ReloginCommand}"
+                            VerticalAlignment="Center" />
+                </Grid>
+            </Border>
+
+            <!-- ===== Hero 核心数据卡：剩余积分放大为主焦点，签到状态弱化为胶囊 ===== -->
+            <Border Classes="card-hero" Margin="0,4,0,0">
+                <Grid ColumnDefinitions="*,Auto">
+                    <StackPanel Grid.Column="0" Spacing="4" VerticalAlignment="Center">
+                        <TextBlock Text="剩余积分" FontSize="12" Foreground="#C7D2FE" />
                         <StackPanel Orientation="Horizontal" Spacing="6">
-                            <TextBlock Text="{Binding RemainingCredits}" Classes="card-value" />
-                            <TextBlock Text="分" FontSize="13" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Bottom" Margin="0,0,0,4" />
+                            <TextBlock Text="{Binding RemainingCredits}" Classes="value-hero" />
+                            <TextBlock Text="分" FontSize="13" Foreground="#C7D2FE"
+                                       VerticalAlignment="Bottom" Margin="0,0,0,7" />
+                        </StackPanel>
+                        <TextBlock Text="{Binding DateText}" Classes="text-caption" Foreground="#C7D2FE" Margin="0,2,0,0" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="10">
+                        <Border Background="#33FFFFFF" CornerRadius="999" Padding="12,6" HorizontalAlignment="Right">
+                            <TextBlock Text="{Binding CheckinStatus}" FontSize="12" FontWeight="SemiBold" Foreground="White" />
+                        </Border>
+                        <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Right">
+                            <TextBlock Text="{Binding StreakDays}" FontSize="18" FontWeight="Bold" Foreground="White"
+                                       VerticalAlignment="Bottom" />
+                            <TextBlock Text="天连签" FontSize="11" Foreground="#C7D2FE"
+                                       VerticalAlignment="Bottom" Margin="0,0,0,2" />
                         </StackPanel>
                     </StackPanel>
-                </Border>
-                <Border Grid.Column="1" Classes="card" Margin="10,0">
-                    <StackPanel Spacing="8">
-                        <TextBlock Text="今日签到" Classes="card-title" />
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <TextBlock Text="{Binding CheckinStatus}" Classes="card-value" Foreground="{StaticResource SuccessBrush}" />
-                        </StackPanel>
-                    </StackPanel>
-                </Border>
-                <Border Grid.Column="2" Classes="card" Margin="10,0,0,0">
-                    <StackPanel Spacing="8">
-                        <TextBlock Text="连续签到" Classes="card-title" />
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <TextBlock Text="{Binding StreakDays}" Classes="card-value" Foreground="{StaticResource WarningBrush}" />
-                            <TextBlock Text="天" FontSize="13" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Bottom" Margin="0,0,0,4" />
-                        </StackPanel>
-                    </StackPanel>
-                </Border>
-            </Grid>
+                </Grid>
+            </Border>
 
             <!-- ===== Trend Chart + Account Overview（紧凑模式下改上下堆叠） ===== -->
             <UniformGrid Classes="dash-lower" Rows="1" Columns="2">
                 <!-- Trend Chart -->
-                <Border Grid.Column="0" Classes="card chart-card" Margin="0,0,10,0">
+                <Border Grid.Column="0" Classes="card chart-card" Margin="0,0,12,0">
                     <StackPanel Spacing="12">
                         <Grid ColumnDefinitions="*,Auto">
                             <TextBlock Grid.Column="0" Text="近 14 天积分趋势" Classes="card-title" />
                             <Border Grid.Column="1" Classes="badge-info">
-                                <TextBlock Text="{Binding TodayReward}" FontSize="11" Foreground="{StaticResource AccentBrush}" />
+                                <TextBlock Text="{Binding TodayReward}" FontSize="11" Foreground="{DynamicResource AccentBrush}" />
                             </Border>
                         </Grid>
                         <Grid RowDefinitions="200,Auto">
@@ -127,29 +142,24 @@
                             <Grid Grid.Row="0" ColumnDefinitions="40,*">
                                 <!-- Y 轴积分刻度（上=最大值，中=中值，下=最小值） -->
                                 <Grid Grid.Column="0" RowDefinitions="Auto,*,Auto" Margin="0,0,6,0">
-                                    <TextBlock Grid.Row="0" Text="{Binding ChartYMax}" FontSize="10" Foreground="{StaticResource TextSubBrush}" HorizontalAlignment="Left" />
-                                    <TextBlock Grid.Row="1" Text="{Binding ChartYMid}" FontSize="10" Foreground="{StaticResource TextSubBrush}" HorizontalAlignment="Left" VerticalAlignment="Center" />
-                                    <TextBlock Grid.Row="2" Text="{Binding ChartYMin}" FontSize="10" Foreground="{StaticResource TextSubBrush}" HorizontalAlignment="Left" VerticalAlignment="Bottom" />
+                                    <TextBlock Grid.Row="0" Text="{Binding ChartYMax}" Classes="text-caption" HorizontalAlignment="Left" />
+                                    <TextBlock Grid.Row="1" Text="{Binding ChartYMid}" Classes="text-caption" HorizontalAlignment="Left" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Row="2" Text="{Binding ChartYMin}" Classes="text-caption" HorizontalAlignment="Left" VerticalAlignment="Bottom" />
                                 </Grid>
                                 <Viewbox Grid.Column="1" Stretch="Fill" Height="200" HorizontalAlignment="Stretch" ClipToBounds="False">
                             <Canvas Width="520" Height="200" Background="Transparent" ClipToBounds="False">
                                 <!-- Grid lines -->
-                                <Line StartPoint="0,40" EndPoint="520,40" Stroke="#FFE2E8F0" StrokeThickness="1" />
-                                <Line StartPoint="0,100" EndPoint="520,100" Stroke="#FFE2E8F0" StrokeThickness="1" />
-                                <Line StartPoint="0,160" EndPoint="520,160" Stroke="#FFE2E8F0" StrokeThickness="1" />
+                                <Line StartPoint="0,40" EndPoint="520,40" Stroke="{DynamicResource BorderBrushKey}" StrokeThickness="1" />
+                                <Line StartPoint="0,100" EndPoint="520,100" Stroke="{DynamicResource BorderBrushKey}" StrokeThickness="1" />
+                                <Line StartPoint="0,160" EndPoint="520,160" Stroke="{DynamicResource BorderBrushKey}" StrokeThickness="1" />
                                 <!-- Fill area -->
-                                <Path Data="{Binding FillGeometry}">
-                                    <Path.Fill>
-                                        <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
-                                            <GradientStop Color="#663B82F6" Offset="0" />
-                                            <GradientStop Color="#0A3B82F6" Offset="1" />
-                                        </LinearGradientBrush>
-                                    </Path.Fill>
-                                </Path>
+                                <Path Data="{Binding FillGeometry}" Fill="{DynamicResource ChartAreaBrush}" />
                                 <!-- Line -->
-                                <Polyline Points="{Binding LinePoints}" Stroke="{StaticResource AccentBrush}" StrokeThickness="2.5" StrokeJoin="Round" />
+                                <Polyline Points="{Binding LinePoints}" Stroke="{DynamicResource AccentBrush}" StrokeThickness="2.5"
+                                          StrokeJoin="Round" StrokeLineCap="Round" />
                                 <!-- Today marker -->
-                                <Ellipse Canvas.Left="{Binding TodayX}" Canvas.Top="{Binding TodayY}" Width="12" Height="12" Fill="White" Stroke="{StaticResource AccentBrush}" StrokeThickness="3" />
+                                <Ellipse Canvas.Left="{Binding TodayX}" Canvas.Top="{Binding TodayY}" Width="12" Height="12"
+                                         Fill="{DynamicResource CardBgBrush}" Stroke="{DynamicResource AccentBrush}" StrokeThickness="3" />
                                 <!-- Hover hit areas: contiguous coverage（宽度=步长，无缝隙，即时触发） -->
                                 <ItemsControl ItemsSource="{Binding TrendPoints}" x:CompileBindings="False">
                                     <ItemsControl.ItemsPanel>
@@ -167,18 +177,20 @@
                                             <Border Width="{Binding StepWidth}" Height="200" Background="Transparent"
                                                     PointerEntered="TrendHoverEnter" PointerExited="TrendHoverExit">
                                                 <Canvas>
-                                                    <!-- 每个数据点一个可见圆点标记（相对 hit-area 原点居中，横坐标由外层 Canvas.Left 定位） -->
+                                                    <!-- 数据点圆点仅悬停命中时显示（常显会造成满屏噪点） -->
                                                     <Ellipse Canvas.Left="0" Canvas.Top="{Binding Y}" Width="12" Height="12"
-                                                             Margin="-6,-6,0,0" Fill="White" Stroke="{StaticResource AccentBrush}" StrokeThickness="2.5" />
+                                                             Margin="-6,-6,0,0" Fill="{DynamicResource CardBgBrush}"
+                                                             Stroke="{DynamicResource AccentBrush}" StrokeThickness="2.5"
+                                                             IsVisible="{Binding IsHovered}" />
                                                     <!-- 命中该点时竖直参考线 -->
-                                                    <Border Width="1" Height="200" Background="#223B82F6" IsVisible="{Binding IsHovered}" HorizontalAlignment="Center" />
+                                                    <Border Width="1" Height="200" Background="#33335CFF" IsVisible="{Binding IsHovered}" HorizontalAlignment="Center" />
                                                 </Canvas>
                                             </Border>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
                                 <!-- 即时悬浮冒泡：显示命中日期与积分 -->
-                                <Border IsVisible="{Binding TrendHoverVisible}" Background="#FF1E293B" CornerRadius="6"
+                                <Border IsVisible="{Binding TrendHoverVisible}" Background="#FF1E293B" CornerRadius="8"
                                         Padding="10,6" IsHitTestVisible="False"
                                         Canvas.Left="{Binding TrendHover.X}" Canvas.Top="{Binding TrendHover.Y}" Margin="-40,-44,0,0">
                                     <TextBlock Text="{Binding TrendHover.Tooltip}" FontSize="12" Foreground="White" TextAlignment="Center" />
@@ -195,7 +207,7 @@
                                 </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <TextBlock Text="{Binding}" FontSize="11" Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Center" />
+                                        <TextBlock Text="{Binding}" Classes="text-caption" HorizontalAlignment="Center" />
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
@@ -204,7 +216,7 @@
                 </Border>
 
                 <!-- Account Overview -->
-                <Border Grid.Column="1" Classes="card overview-card" Margin="10,0,0,0">
+                <Border Grid.Column="1" Classes="card overview-card" Margin="12,0,0,0">
                     <StackPanel Spacing="12">
                         <TextBlock Text="账号概览" Classes="card-title" />
                         <ItemsControl ItemsSource="{Binding Accounts}">
@@ -213,7 +225,7 @@
                                     <Border Classes="acct-card" Classes.acct-active="{Binding IsCurrent}" Margin="0,2">
                                         <Button Classes="acct-card" Command="{Binding SelectCommand}" Background="Transparent" Padding="0"
                                                 HorizontalContentAlignment="Stretch">
-                                            <Grid ColumnDefinitions="36,*,Auto" Margin="6,4">
+                                            <Grid ColumnDefinitions="36,*,Auto" Margin="8,6">
                                                 <Grid Grid.Column="0" Width="36" Height="36" VerticalAlignment="Center">
                                                     <Border CornerRadius="18" Background="{Binding Color}" IsVisible="{Binding !HasAvatar}">
                                                         <TextBlock Text="{Binding Initial}" Foreground="White" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" />
@@ -226,7 +238,14 @@
                                                 </Grid>
                                                 <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" Margin="10,0" />
                                                 <Border Grid.Column="2" Classes.badge-ok="{Binding IsCurrent}" Classes.badge-info="{Binding !IsCurrent}" VerticalAlignment="Center">
-                                                    <TextBlock Text="{Binding Status}" FontSize="11" />
+                                                    <Panel>
+                                                        <TextBlock Text="{Binding Status}" FontSize="11"
+                                                                   Foreground="{DynamicResource SuccessBrush}"
+                                                                   IsVisible="{Binding IsCurrent}" />
+                                                        <TextBlock Text="{Binding Status}" FontSize="11"
+                                                                   Foreground="{DynamicResource AccentBrush}"
+                                                                   IsVisible="{Binding !IsCurrent}" />
+                                                    </Panel>
                                                 </Border>
                                             </Grid>
                                         </Button>
@@ -240,8 +259,3 @@
         </StackPanel>
     </ScrollViewer>
 </UserControl>
-
-
-
-
-

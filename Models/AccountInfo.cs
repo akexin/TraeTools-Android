@@ -119,6 +119,13 @@ public class CalendarDay
 {
     public int Day { get; set; }
     public string State { get; set; } = "empty";
+
+    // ===== 日历视觉状态布尔位：供视图 Classes 驱动样式（颜色统一走主题令牌，支持暗色模式） =====
+    public bool IsChecked => State == "checked";
+    public bool IsMissed => State == "missed";
+    public bool IsToday => State == "today";
+    public bool IsBlank => State == "blank" || Day == 0;
+
     public IBrush DayBgBrush
     {
         get
