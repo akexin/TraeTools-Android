@@ -42,10 +42,19 @@
     <OutputType>Exe</OutputType>
     <SupportedOSPlatformVersion>26</SupportedOSPlatformVersion>
     <ApplicationId>cn.akexin.traetools</ApplicationId>
-    <ApplicationDisplayVersion>1.4.1</ApplicationDisplayVersion>
-    <ApplicationVersion>11</ApplicationVersion>
+    <ApplicationDisplayVersion>1.4.2</ApplicationDisplayVersion>
+    <ApplicationVersion>12</ApplicationVersion>
     <AndroidPackageFormat>apk</AndroidPackageFormat>
     <AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
+    <!-- 关闭 AOT 与链接器：.NET for Android 在 Release 下默认对程序集做 LLVM AOT，
+         反射路径（ViewLocator 的 Activator.CreateInstance、SQLitePCLRaw provider 初始化、
+         System.Text.Json / CommunityToolkit 源生成之外的反射）在 AOT 下可能抛
+         MissingRuntimeArtifactException，表现为"启动即闪退"。
+         本应用是网络 IO 型工具，AOT 收益有限，稳定性优先，故显式关闭。 -->
+    <RunAOTCompilation>false</RunAOTCompilation>
+    <AOTAssemblies>false</AOTAssemblies>
+    <AndroidLinkMode>None</AndroidLinkMode>
+    <PublishTrimmed>false</PublishTrimmed>
     <!-- 注意：ApplicationManifest/ApplicationIcon/UseWindowsForms 仅 Windows 条件组定义，
          本 TFM 下不赋值即不生效，无需清空；单文件发布属性同理（Android 不支持 PublishSingleFile） -->
     <SelfContained>true</SelfContained>

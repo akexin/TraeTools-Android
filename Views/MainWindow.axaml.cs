@@ -91,9 +91,17 @@ public partial class MainWindow : Window
     {
         base.OnOpened(e);
         TraeTools.Platform.CrashLog.Boot("MainWindow.OnOpened");
-        OnOpenedEulaCheck();
-        // Android 端自动签到仅 App 运行期间有效；无人值守场景请使用「云端签到」
-        _autoCheckinTimer.Start();
+        try
+        {
+            OnOpenedEulaCheck();
+            // Android 端自动签到仅 App 运行期间有效；无人值守场景请使用「云端签到」
+            _autoCheckinTimer.Start();
+        }
+        catch (Exception ex)
+        {
+            // 启动后处理（EULA / 定时器）失败也不能带崩 UI
+            TraeTools.Platform.CrashLog.Write("MainWindow.OnOpened", ex);
+        }
     }
 
     protected override void OnClosed(EventArgs e)

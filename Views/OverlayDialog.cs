@@ -39,9 +39,18 @@ public static class OverlayDialog
         if (!IsOverlayMode)
             return await dialog.ShowDialog<T>(owner);
 
-        var tcs = ShowCore(dialog);
-        var result = await tcs.Task;
-        return result is T typed ? typed : default!;
+        try
+        {
+            var tcs = ShowCore(dialog);
+            var result = await tcs.Task;
+            return result is T typed ? typed : default!;
+        }
+        catch (Exception ex)
+        {
+            // 覆盖层呈现失败时降级返回默认值：绝不让对话框问题带崩应用（Android 上即闪退）
+            TraeTools.Platform.CrashLog.Write("OverlayDialog.ShowAsync", ex);
+            return default!;
+        }
     }
 
     /// <summary>对话框按钮统一关闭入口：Android 走覆盖层还原，桌面走 Window.Close(result)。</summary>
