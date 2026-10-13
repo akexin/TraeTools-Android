@@ -27,7 +27,7 @@ jobs:
       # 发布单文件自包含 exe：应用内更新器（UpdaterService）会下载名为 TraeTools.exe 的资产，
       # 直接覆盖本地 exe 后重启，因此必须产出可独立运行的单文件程序
       - name: Publish (self-contained single-file win-x64)
-        run: dotnet publish TraeTools.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish
+        run: dotnet publish TraeTools.csproj -c Release -f net10.0-windows -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish
 
       - name: Zip distribution
         shell: powershell
@@ -104,7 +104,7 @@ jobs:
 
       # Android APK：debug 签名（可直接安装）；签名 keystore 后续在仓库 Secrets 配置后改为 release 签名
       - name: Publish (android apk)
-        run: dotnet publish TraeTools.csproj -c Release -f net9.0-android -p:AndroidPackageFormat=apk -o publish-android
+        run: dotnet publish TraeTools.csproj -c Release -f net10.0-android -p:AndroidPackageFormat=apk -o publish-android
 
       - name: Collect apk
         run: |

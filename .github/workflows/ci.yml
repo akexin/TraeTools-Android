@@ -23,13 +23,13 @@ jobs:
           dotnet-version: "10.0.x"
 
       - name: Build Windows (Release)
-        run: dotnet build TraeTools.csproj -c Release -f net9.0-windows --nologo
+        run: dotnet build TraeTools.csproj -c Release -f net10.0-windows --nologo
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: trae-tools-build-windows
-          path: bin/Release/net9.0-windows/
+          path: bin/Release/net10.0-windows/
           if-no-files-found: error
 
   build-android:
@@ -48,4 +48,4 @@ jobs:
         run: dotnet workload install android
 
       - name: Build Android (Release)
-        run: dotnet build TraeTools.csproj -c Release -f net9.0-android --nologo
+        run: dotnet build TraeTools.csproj -c Release -f net10.0-android --nologo
