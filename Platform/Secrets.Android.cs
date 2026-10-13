@@ -36,7 +36,8 @@ internal static partial class Secrets
             var pub = GetOrCreatePublicKey();
             if (pub == null) return null;
             var wrapCipher = Cipher.GetInstance("RSA/ECB/PKCS1Padding")!;
-            wrapCipher.Init(Cipher.EncryptMode, pub);
+            // Cipher.EncryptMode 常量已废弃（CS0619，报错级），改用 CipherMode 枚举成员
+            wrapCipher.Init(CipherMode.EncryptMode, pub);
             var wrapped = wrapCipher.DoFinal(key);
             if (wrapped == null) return null;
 
@@ -67,7 +68,7 @@ internal static partial class Secrets
             var priv = GetPrivateKey();
             if (priv == null) return null;
             var unwrapCipher = Cipher.GetInstance("RSA/ECB/PKCS1Padding")!;
-            unwrapCipher.Init(Cipher.DecryptMode, priv);
+            unwrapCipher.Init(CipherMode.DecryptMode, priv);
             var key = unwrapCipher.DoFinal(wrapped);
             if (key == null) return null;
 

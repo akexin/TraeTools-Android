@@ -29,6 +29,9 @@ sealed class Program
 #endif
 
     // Avalonia configuration, don't remove; also used by visual designer.
+    // UsePlatformDetect 由 Avalonia.Desktop 提供（仅 Windows 目标引用该包），
+    // Android 端由 AvaloniaAndroidApplication 基类自行构建 AppBuilder，故整段排除。
+#if !ANDROID
     public static AppBuilder BuildAvaloniaApp()
         => AppBuilder.Configure<App>()
             .UsePlatformDetect()
@@ -37,4 +40,5 @@ sealed class Program
 #endif
             .WithInterFont()
             .LogToTrace();
+#endif
 }
