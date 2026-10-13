@@ -95,8 +95,8 @@ public partial class LoginWindow : Window
         {
             _busy = false;
         }
-    }
 #endif
+    }
 
     private void OnOpenBrowserClick(object? sender, RoutedEventArgs e)
     {
