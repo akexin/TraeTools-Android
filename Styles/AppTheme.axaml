@@ -255,7 +255,6 @@
                 <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.08" />
             </Transitions>
         </Setter>
-        <Setter Property="BoxShadow" Value="0 4 12 0 #2E2D5BFF" />
     </Style>
     <Style Selector="Button.btn-hero:pointerover /template/ ContentPresenter">
         <Setter Property="Opacity" Value="0.92" />
@@ -276,7 +275,7 @@
         <Setter Property="MinHeight" Value="36" />
     </Style>
     <Style Selector="Button.btn-danger:pointerover /template/ ContentPresenter">
-        <Setter Property="Background" Value="{DynamicResource DangerSoftBrush}" />
+        <Setter Property="Background" Value="#FFEF6B6E" />
     </Style>
 
     <!-- 默认按钮 -->

@@ -238,12 +238,14 @@
                                                 </Grid>
                                                 <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" Margin="10,0" />
                                                 <Border Grid.Column="2" Classes.badge-ok="{Binding IsCurrent}" Classes.badge-info="{Binding !IsCurrent}" VerticalAlignment="Center">
-                                                    <TextBlock Text="{Binding Status}" FontSize="11"
-                                                               Foreground="{DynamicResource SuccessBrush}"
-                                                               IsVisible="{Binding IsCurrent}" />
-                                                    <TextBlock Text="{Binding Status}" FontSize="11"
-                                                               Foreground="{DynamicResource AccentBrush}"
-                                                               IsVisible="{Binding !IsCurrent}" />
+                                                    <Panel>
+                                                        <TextBlock Text="{Binding Status}" FontSize="11"
+                                                                   Foreground="{DynamicResource SuccessBrush}"
+                                                                   IsVisible="{Binding IsCurrent}" />
+                                                        <TextBlock Text="{Binding Status}" FontSize="11"
+                                                                   Foreground="{DynamicResource AccentBrush}"
+                                                                   IsVisible="{Binding !IsCurrent}" />
+                                                    </Panel>
                                                 </Border>
                                             </Grid>
                                         </Button>
