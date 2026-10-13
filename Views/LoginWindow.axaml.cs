@@ -35,10 +35,15 @@ public partial class LoginWindow : Window
         _account = account;
     }
 
-#if !ANDROID
-    /// <summary>内嵌 WebView2 自动登录：独立 STA 线程宿主，自动读取 Cloud-IDE-Token 与 X-Cloudide-Session。</summary>
+    // 注意：XAML 中该按钮绑定了 Click="OnAutoLoginClick"，事件处理器在编译期解析，
+    // 因此 Android 端也必须存在同名方法（按钮本身已隐藏，仅作为兜底提示）。
     private async void OnAutoLoginClick(object? sender, RoutedEventArgs e)
     {
+#if ANDROID
+        AutoStatus.Text = "Android 端不支持内嵌浏览器自动登录，请使用下方「打开浏览器登录 + 粘贴 Token」方案。";
+        await Task.CompletedTask;
+        return;
+#else
         if (_busy || _account == null) return;
         if (string.IsNullOrEmpty(_account.Token))
         {

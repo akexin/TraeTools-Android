@@ -7,6 +7,9 @@
          注意：Avalonia 12 系列最低支持 .NET 10（Avalonia.Android 12.1.2 仅提供 net10.0-android36.0），
          故两端统一使用 .NET 10（LTS）。 -->
     <TargetFrameworks>net10.0-windows;net10.0-android</TargetFrameworks>
+    <!-- 多目标项目在非 Windows 系统上还原/构建时，net10.0-windows 也需要 Windows 目标包，
+         开启后可从 NuGet 下载（CI 的 ubuntu job 同样依赖此项，Windows 本机上为无操作） -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyTitle>TraeTools</AssemblyTitle>

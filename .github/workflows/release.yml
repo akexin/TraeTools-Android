@@ -103,8 +103,9 @@ jobs:
         run: dotnet workload install android
 
       # Android APK：debug 签名（可直接安装）；签名 keystore 后续在仓库 Secrets 配置后改为 release 签名
+      # EnableWindowsTargeting：多目标项目还原需一并还原 net10.0-windows，ubuntu 上必须显式开启
       - name: Publish (android apk)
-        run: dotnet publish TraeTools.csproj -c Release -f net10.0-android -p:AndroidPackageFormat=apk -o publish-android
+        run: dotnet publish TraeTools.csproj -c Release -f net10.0-android -p:EnableWindowsTargeting=true -p:AndroidPackageFormat=apk -o publish-android
 
       - name: Collect apk
         run: |
