@@ -3,11 +3,9 @@
 > Trae 一体化管理工具：多账号每日签到 · 云端自动签到 · 账号快速切换 · 用量统计
 > 支持 **Windows 桌面端** 与 **Android 手机端**（APK）
 
-TraeTools 是对 **TRAE-Checkin** 的重构版，并集成了 **Trea-Switch** 的账号切换能力，用 Avalonia 重写为现代化跨平台应用（.NET 9）。一个工具覆盖 Trae 账号的「登录 → 签到 → 切换 → 用量查看 → 云端托管」全流程。
+TraeTools 是对 **TRAE-Checkin** 的重构版，并集成了 **Trea-Switch** 的账号切换能力，用 Avalonia 重写为现代化跨平台应用（.NET 10）。一个工具覆盖 Trae 账号的「登录 → 签到 → 切换 → 用量查看 → 云端托管」全流程。
 
 > **2026-10 客户端合并公告**：字节跳动已于 2026-10-09 将 TraeWork 与 TraeCode 合并为统一的 **TRAE** 客户端（Agent / IDE 双模式），TraeWork 于 2026-10-23 停服。本工具已同步适配：设备号解析、客户端进程/目录探测均覆盖新旧名称（TRAE / TRAE CN / TRAE SOLO CN），老用户升级客户端后无需任何操作。
-
-### 气死我了，怎么老是给我爆9074
 
 ## 功能特性
 
@@ -107,7 +105,7 @@ dotnet publish TraeTools.csproj -c Release -f net10.0-android -o publish-android
 
 ## 开发者
 
-- 技术栈：Avalonia 12 / .NET 9 / CommunityToolkit.Mvvm / Sodium.Core / WebView2（Windows）
+- 技术栈：Avalonia 12 / .NET 10 / CommunityToolkit.Mvvm / Sodium.Core / WebView2（Windows）
 - 目录：`ViewModels/` 页面逻辑、`Services/` 网络与领域服务、`Views/` 界面、`Models/` 数据模型、`Platform/` 跨平台抽象（DPAPI/Keystore、浏览器启动等）
 - 多目标：`net10.0-windows`（WinExe 单文件）与 `net10.0-android`（APK），平台差异集中在 `Platform/` 与 `#if ANDROID` 条件编译
 - 行为默认不对外请求官方非公开接口之外的能力；用量/积分接口为逆向网页接口，字段随官方可能变化，代码均做容错解析
