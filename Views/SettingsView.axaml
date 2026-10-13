@@ -35,10 +35,10 @@
                     <Button Grid.Column="1" Classes="btn-primary" Content="保存设置" Command="{Binding SaveSettingsCommand}" />
                 </Grid>
 
-                <!-- ===== Top Row: Auto Checkin + Token ===== -->
-                <Grid ColumnDefinitions="*,*">
+                <!-- ===== Top Row: Auto Checkin + Token（紧凑模式下上下堆叠） ===== -->
+                <Grid Classes="stack2" ColumnDefinitions="*,*">
                     <!-- Auto Checkin Panel -->
-                    <Border Grid.Column="0" Classes="card" Margin="0,0,10,0">
+                    <Border Grid.Column="0" Classes="card stack-first" Margin="0,0,10,0">
                         <StackPanel Spacing="14">
                             <TextBlock Text="自动签到" Classes="card-title" />
                             <Grid ColumnDefinitions="*,Auto">
@@ -80,7 +80,7 @@
                     </Border>
 
                     <!-- Token Panel -->
-                    <Border Grid.Column="1" Classes="card" Margin="10,0,0,0">
+                    <Border Grid.Column="1" Classes="card stack-second" Margin="10,0,0,0">
                         <StackPanel Spacing="14">
                             <Grid ColumnDefinitions="*,Auto">
                                 <TextBlock Grid.Column="0" Text="Token 信息" Classes="card-title" />
@@ -112,10 +112,10 @@
                     </Border>
                 </Grid>
 
-                <!-- ===== Bottom Row: Feishu Push + Account Management ===== -->
-                <Grid ColumnDefinitions="*,*">
+                <!-- ===== Bottom Row: Feishu Push + Account Management（紧凑模式下上下堆叠） ===== -->
+                <Grid Classes="stack2" ColumnDefinitions="*,*">
                     <!-- Feishu Push Panel -->
-                    <Border Grid.Column="0" Classes="card" Margin="0,0,10,0">
+                    <Border Grid.Column="0" Classes="card stack-first" Margin="0,0,10,0">
                         <StackPanel Spacing="14">
                             <TextBlock Text="飞书推送" Classes="card-title" />
                             <StackPanel Spacing="4">
@@ -136,7 +136,7 @@
                     </Border>
 
                     <!-- Account Management Panel -->
-                    <Border Grid.Column="1" Classes="card" Margin="10,0,0,0">
+                    <Border Grid.Column="1" Classes="card stack-second" Margin="10,0,0,0">
                         <StackPanel Spacing="14">
                             <Grid ColumnDefinitions="*,Auto">
                                 <TextBlock Grid.Column="0" Text="账号管理" Classes="card-title" />

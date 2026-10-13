@@ -45,8 +45,8 @@
     <ScrollViewer Background="Transparent" HorizontalScrollBarVisibility="Disabled">
         <StackPanel Spacing="20">
 
-            <!-- ===== Header ===== -->
-            <Grid ColumnDefinitions="*,Auto">
+            <!-- ===== Header（紧凑模式下按钮堆叠到标题下方） ===== -->
+            <Grid Classes="dash-header" ColumnDefinitions="*,Auto">
                 <StackPanel Grid.Column="0" Spacing="4">
                     <TextBlock Text="仪表盘" Classes="page-title" />
                     <TextBlock Text="{Binding DateText}" Classes="page-subtitle" />
@@ -72,7 +72,7 @@
                         </StackPanel>
                     </StackPanel>
                 </StackPanel>
-                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
+                <StackPanel Grid.Column="1" Classes="dash-actions" Orientation="Horizontal" Spacing="10">
                     <Button Classes="btn" Content="刷新状态" Command="{Binding RefreshStatusCommand}" />
                     <Button Classes="btn-danger" Content="重新登录" Command="{Binding ReloginCommand}"
                         IsVisible="{Binding NeedLogin}" />
@@ -111,10 +111,10 @@
                 </Border>
             </Grid>
 
-            <!-- ===== Trend Chart + Account Overview ===== -->
-            <Grid ColumnDefinitions="1.6*,1*">
+            <!-- ===== Trend Chart + Account Overview（紧凑模式下改上下堆叠） ===== -->
+            <Grid Classes="dash-lower" ColumnDefinitions="1.6*,1*">
                 <!-- Trend Chart -->
-                <Border Grid.Column="0" Classes="card" Margin="0,0,10,0">
+                <Border Grid.Column="0" Classes="card chart-card" Margin="0,0,10,0">
                     <StackPanel Spacing="12">
                         <Grid ColumnDefinitions="*,Auto">
                             <TextBlock Grid.Column="0" Text="近 14 天积分趋势" Classes="card-title" />
@@ -204,7 +204,7 @@
                 </Border>
 
                 <!-- Account Overview -->
-                <Border Grid.Column="1" Classes="card" Margin="10,0,0,0">
+                <Border Grid.Column="1" Classes="card overview-card" Margin="10,0,0,0">
                     <StackPanel Spacing="12">
                         <TextBlock Text="账号概览" Classes="card-title" />
                         <ItemsControl ItemsSource="{Binding Accounts}">

@@ -25,6 +25,13 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private string _currentPageKey = "dashboard";
 
+    /// <summary>
+    /// 紧凑模式（手机屏适配）：宿主宽度 &lt; 640 逻辑像素时由 MainView 按实际 Bounds 切换。
+    /// 紧凑模式下侧栏隐藏，改为顶部品牌栏 + 底部标签栏；内容边距收紧、仪表盘单列堆叠。
+    /// </summary>
+    [ObservableProperty]
+    private bool _isCompact;
+
     // 全局服务容器：页面 VM 通过静态属性访问
     public static AppConfig? AppConfig;
     public static TraeApiClient? CheckinApi;

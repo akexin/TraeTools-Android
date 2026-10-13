@@ -86,12 +86,36 @@ public partial class MainView : UserControl
         TraeTools.Platform.CrashLog.Boot("MainView: attached to visual tree");
         try
         {
+            // 手机屏适配：按实际宽度切换紧凑模式（顶栏 + 底部标签栏）
+            UpdateCompactMode(Bounds.Width);
             // Android 端自动签到仅 App 运行期间有效；无人值守场景请使用「云端签到」
             _autoCheckinTimer.Start();
         }
         catch (Exception ex)
         {
             TraeTools.Platform.CrashLog.Write("MainView.OnAttachedToVisualTree", ex);
+        }
+    }
+
+    /// <summary>宿主尺寸变化时切换紧凑模式（手机 &lt;640 逻辑像素）。</summary>
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs e)
+    {
+        base.OnPropertyChanged(e);
+        if (e.Property == BoundsProperty && e.NewValue is Rect r)
+            UpdateCompactMode(r.Width);
+    }
+
+    private void UpdateCompactMode(double width)
+    {
+        try
+        {
+            if (width <= 0) return;
+            if (DataContext is MainViewModel vm)
+                vm.IsCompact = width < 640;
+        }
+        catch (Exception ex)
+        {
+            TraeTools.Platform.CrashLog.Write("MainView.UpdateCompactMode", ex);
         }
     }
 

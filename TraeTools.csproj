@@ -42,8 +42,8 @@
     <OutputType>Exe</OutputType>
     <SupportedOSPlatformVersion>26</SupportedOSPlatformVersion>
     <ApplicationId>cn.akexin.traetools</ApplicationId>
-    <ApplicationDisplayVersion>1.4.3</ApplicationDisplayVersion>
-    <ApplicationVersion>13</ApplicationVersion>
+    <ApplicationDisplayVersion>1.4.4</ApplicationDisplayVersion>
+    <ApplicationVersion>14</ApplicationVersion>
     <AndroidPackageFormat>apk</AndroidPackageFormat>
     <AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
     <!-- 关闭 AOT 与链接器：.NET for Android 在 Release 下默认对程序集做 LLVM AOT，
