@@ -74,7 +74,23 @@ public class CrashReportActivity : Activity
             {
                 var cm = (global::Android.Content.ClipboardManager?)
                     GetSystemService(global::Android.Content.Context.ClipboardService);
-                cm?.SetPrimaryClip(global::Android.Content.ClipData.NewPlainText("TraeTools-crash", text));
+                if (cm != null)
+                {
+                    var clip = global::Android.Content.ClipData.NewPlainText("TraeTools-crash", text);
+                    // 各版本 .NET Android 的 API 形态不一致（PrimaryClip 属性 / SetPrimaryClip 方法），
+                    // 用反射兼容，避免编译期绑定失败。
+                    var t = cm.GetType();
+                    var p = t.GetProperty("PrimaryClip");
+                    if (p != null && p.CanWrite)
+                    {
+                        p.SetValue(cm, clip);
+                    }
+                    else
+                    {
+                        var m = t.GetMethod("SetPrimaryClip", new[] { typeof(global::Android.Content.ClipData) });
+                        m?.Invoke(cm, new object[] { clip });
+                    }
+                }
                 global::Android.Widget.Toast.MakeText(this, "已复制",
                     global::Android.Widget.ToastLength.Short)?.Show();
             }

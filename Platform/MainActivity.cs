@@ -53,6 +53,26 @@ public class TraeAndroidApplication : AvaloniaAndroidApplication<App>
     }
 
     protected override Avalonia.AppBuilder CustomizeAppBuilder(Avalonia.AppBuilder builder)
-        => base.CustomizeAppBuilder(builder).WithInterFont();
+    {
+        var b = base.CustomizeAppBuilder(builder);
+        try
+        {
+            // Avalonia 12 的 Android 渲染后端按 RenderingMode 顺序尝试（默认 [Egl, Software]）。
+            // 问题：EglPlatformGraphics.TryCreate() 在部分机型上不是返回 null 而是直接抛异常
+            // （Android 16 / 澎湃 OS 实测启动即闪退），此时 Software 兜底根本不会被执行，
+            // 平台层继续抛 InvalidOperationException / native 崩溃 → 进程直接死。
+            // 因此这里显式只用软件渲染：本应用是轻量 IO 型工具，先保证能起来。
+            b = b.With(new Avalonia.AndroidPlatformOptions
+            {
+                RenderingMode = new[] { Avalonia.AndroidRenderingMode.Software }
+            });
+            TraeTools.Platform.CrashLog.Boot("CustomizeAppBuilder: RenderingMode=Software");
+        }
+        catch (System.Exception ex)
+        {
+            TraeTools.Platform.CrashLog.Write("CustomizeAppBuilder", ex);
+        }
+        return b.WithInterFont();
+    }
 }
 #endif
