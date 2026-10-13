@@ -11,7 +11,9 @@ internal static class UiHost
     {
         get
         {
-            var lifetime = Application.Current?.ApplicationLifetime;
+            // Android 上 Application 需写全称：.NET Android SDK 的隐式全局 using 含 Android.App，
+            // 裸写 Application 会与 Android.App.Application 歧义（CS0104）
+            var lifetime = Avalonia.Application.Current?.ApplicationLifetime;
             if (lifetime is IClassicDesktopStyleApplicationLifetime desktop)
                 return desktop.MainWindow;
 #if ANDROID

@@ -66,9 +66,8 @@ public sealed class ClientController(string processName, string exePath) : IClie
 #endif // !ANDROID
 
 #if ANDROID
-namespace TraeSwitch.Services;
-
 /// <summary>Android 空实现：账号切换需要操作本地 Trae 客户端进程/文件，仅 Windows 桌面端支持。</summary>
+/// 注意：文件顶部已有 file-scoped namespace（两平台共用），此处不可重复声明（CS8954）。</summary>
 public sealed class ClientController(string processName, string exePath) : IClientController
 {
     public void KillAll() { }

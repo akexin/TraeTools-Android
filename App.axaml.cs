@@ -7,7 +7,9 @@ using TraeTools.Views;
 
 namespace TraeTools;
 
-public partial class App : Application
+// 注意：.NET Android SDK 会生成含 Android.App 的全局 using，此处必须写全称
+// Avalonia.Application，否则与 Android.App.Application 歧义（CS0104）
+public partial class App : Avalonia.Application
 {
     /// <summary>系统托盘图标全局引用（TrayIcon 无源头引用会被 GC 回收，故存于此；仅 Windows 桌面端使用）。</summary>
     public static TrayIcon? TrayRef;
