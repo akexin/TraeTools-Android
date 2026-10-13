@@ -112,7 +112,7 @@
             </Grid>
 
             <!-- ===== Trend Chart + Account Overview（紧凑模式下改上下堆叠） ===== -->
-            <Grid Classes="dash-lower" ColumnDefinitions="1.6*,1*">
+            <UniformGrid Classes="dash-lower" Rows="1" Columns="2">
                 <!-- Trend Chart -->
                 <Border Grid.Column="0" Classes="card chart-card" Margin="0,0,10,0">
                     <StackPanel Spacing="12">
@@ -236,7 +236,7 @@
                         </ItemsControl>
                     </StackPanel>
                 </Border>
-            </Grid>
+            </UniformGrid>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

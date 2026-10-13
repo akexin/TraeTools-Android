@@ -36,7 +36,7 @@
                 </Grid>
 
                 <!-- ===== Top Row: Auto Checkin + Token（紧凑模式下上下堆叠） ===== -->
-                <Grid Classes="stack2" ColumnDefinitions="*,*">
+                <UniformGrid Classes="stack2" Rows="1" Columns="2">
                     <!-- Auto Checkin Panel -->
                     <Border Grid.Column="0" Classes="card stack-first" Margin="0,0,10,0">
                         <StackPanel Spacing="14">
@@ -110,10 +110,10 @@
                                        Foreground="{StaticResource TextSubBrush}" TextWrapping="Wrap" />
                         </StackPanel>
                     </Border>
-                </Grid>
+                </UniformGrid>
 
                 <!-- ===== Bottom Row: Feishu Push + Account Management（紧凑模式下上下堆叠） ===== -->
-                <Grid Classes="stack2" ColumnDefinitions="*,*">
+                <UniformGrid Classes="stack2" Rows="1" Columns="2">
                     <!-- Feishu Push Panel -->
                     <Border Grid.Column="0" Classes="card stack-first" Margin="0,0,10,0">
                         <StackPanel Spacing="14">
@@ -205,7 +205,7 @@
                             </ListBox>
                         </StackPanel>
                     </Border>
-                </Grid>
+                </UniformGrid>
 
                 <!-- ===== About Section ===== -->
                 <StackPanel Spacing="12">

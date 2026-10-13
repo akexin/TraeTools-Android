@@ -40,7 +40,7 @@
             </Grid>
 
             <!-- ===== 汇总卡片 ===== -->
-            <Grid Grid.Row="1" Classes="stat-grid" ColumnDefinitions="*,*,*,*" Margin="0,14,0,0">
+            <UniformGrid Grid.Row="1" Classes="stat-grid" Margin="0,14,0,0" Rows="1" Columns="4">
                 <Border Grid.Column="0" Classes="card stat0" Margin="0,0,10,0">
                     <StackPanel Spacing="8">
                         <TextBlock Text="记录会话" Classes="card-title" />
@@ -79,7 +79,7 @@
                         </StackPanel>
                     </StackPanel>
                 </Border>
-            </Grid>
+            </UniformGrid>
 
             <!-- ===== 积分快过期提醒 ===== -->
             <Border Grid.Row="2" Classes="card" IsVisible="{Binding HasExpiring}" Margin="0,14,0,0">
@@ -107,7 +107,7 @@
             </Border>
 
             <!-- ===== 会话列表 + 模型分布（占满剩余高度，内部各自滚动） ===== -->
-            <Grid Grid.Row="3" Classes="stack2" ColumnDefinitions="1.6*,1*" Margin="0,14,0,0">
+            <UniformGrid Grid.Row="3" Classes="stack2" Margin="0,14,0,0" Rows="1" Columns="2">
                 <!-- 会话列表 -->
                 <Border Grid.Column="0" Classes="card stack-first" Margin="0,0,10,0">
                     <Grid RowDefinitions="Auto,*">
@@ -188,6 +188,6 @@
                         </ScrollViewer>
                     </Grid>
                 </Border>
-            </Grid>
+            </UniformGrid>
         </Grid>
 </UserControl>
