@@ -63,7 +63,7 @@ jobs:
             echo ""
             echo "- 单文件自包含 Windows x64 程序（无需额外安装 .NET 运行时）"
             echo "- Android 手机版 APK（Android 8.0+，见 TraeTools-Android.apk）"
-            echo "- 应用内「检查更新」为**非强制**：仅提示并引导下载，不会自动替换安装"
+            echo "- 应用内「检查更新」为**非强制**：仅提示，经用户确认后才下载安装（Windows 端后台替换，Android 端跳转下载页手动安装），可随时取消"
             echo ""
             if [ -n "${PREV}" ]; then
               echo "## 更新差异（${PREV} → ${GITHUB_REF_NAME}）"
