@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 jobs:
-  build:
+  build-windows:
     runs-on: windows-latest
     steps:
       - name: Checkout
@@ -21,12 +21,30 @@ jobs:
         with:
           dotnet-version: "9.0.x"
 
-      - name: Build (Release)
-        run: dotnet build TraeTools.csproj -c Release --nologo
+      - name: Build Windows (Release)
+        run: dotnet build TraeTools.csproj -c Release -f net9.0-windows --nologo
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: trae-tools-build
+          name: trae-tools-build-windows
           path: bin/Release/net9.0-windows/
           if-no-files-found: error
+
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+
+      # Android workload：含 Microsoft.Android SDK / OpenJDK 等构建依赖（首次安装约 5-10 分钟）
+      - name: Install Android workload
+        run: dotnet workload install android
+
+      - name: Build Android (Release)
+        run: dotnet build TraeTools.csproj -c Release -f net9.0-android --nologo

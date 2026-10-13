@@ -1,4 +1,3 @@
-using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 
@@ -6,9 +5,9 @@ namespace TraeCheckin;
 
 /// <summary>
 /// 本地配置：存储 token、设备号、自动签到设置。
-/// 保存到 %APPDATA%\TraeTools\config.json。
-/// 敏感字段（Token/Session/GitHubToken/DeviceId）以当前 Windows 用户 DPAPI 加密落盘，
-/// 加载时解密回内存；旧版明文在首次加载时自动迁移加密。
+/// 保存到数据根目录 TraeTools/config.json（Windows 为 %APPDATA%，Android 为 App 私有目录）。
+/// 敏感字段（Token/Session/GitHubToken/DeviceId）以平台机制加密落盘
+/// （Windows：DPAPI；Android：Keystore），加载时解密回内存；旧版明文在首次加载时自动迁移加密。
 /// </summary>
 public class AppConfig
 {
@@ -120,7 +119,7 @@ public class AppConfig
     }
 
     /// <summary>
-    /// 生成一个 16 位十进制设备 ID（与 TraeWork Aha SDK 的设备号格式一致）。
+    /// 生成一个 16 位十进制设备 ID（与 TRAE 客户端 Aha SDK 的设备号格式一致）。
     /// 签到接口风控要求 x-device-id 为数字设备号，使用 GUID/UUID 会触发 9074。
     /// </summary>
     private static string GenerateDeviceId()
@@ -129,13 +128,15 @@ public class AppConfig
     }
 
     /// <summary>
-    /// 从本机 TraeWork 官方客户端的数据目录解析 Aha 设备 ID（16 位数字）。
+    /// 从本机 TRAE 官方客户端的数据目录解析 Aha 设备 ID（16 位数字）。
     /// storage.json 中存在形如 "iCubeAuthInfo://icube-dc:3049374157909753" 的键。
+    /// 2026-10 起 TraeWork 与 TraeCode 已合并为统一的 TRAE 客户端，
+    /// 目录名覆盖新旧各版本（TRAE / TRAE CN / TRAE SOLO CN / Trae CN）。
     /// </summary>
     internal static string? TryResolveAhaDeviceId()
     {
         var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        var dirs = new[] { "TRAE SOLO CN", "Trae CN", "TRAE SOLO" };
+        var dirs = new[] { "TRAE", "TRAE CN", "TRAE SOLO CN", "Trae CN", "TRAE SOLO" };
         foreach (var dir in dirs)
         {
             var path = Path.Combine(appData, dir, "User", "globalStorage", "storage.json");
@@ -237,22 +238,8 @@ public class AppConfig
     }
 
     /// <summary>DPAPI 加密（当前 Windows 用户作用域）。保护失败抛异常，由调用方兜底（保留旧文件）。</summary>
-    private static string? EncryptSecret(string? plain)
-    {
-        if (string.IsNullOrEmpty(plain)) return plain;
-        var bytes = ProtectedData.Protect(Encoding.UTF8.GetBytes(plain), null, DataProtectionScope.CurrentUser);
-        return Convert.ToBase64String(bytes);
-    }
+    private static string? EncryptSecret(string? plain) => TraeTools.Platform.Secrets.Protect(plain);
 
     /// <summary>DPAPI 解密；失败（如换 Windows 用户/重装系统）返回 null，触发重新登录。</summary>
-    private static string? DecryptSecret(string? enc)
-    {
-        if (string.IsNullOrEmpty(enc)) return enc;
-        try
-        {
-            var bytes = ProtectedData.Unprotect(Convert.FromBase64String(enc), null, DataProtectionScope.CurrentUser);
-            return Encoding.UTF8.GetString(bytes);
-        }
-        catch { return null; }
-    }
+    private static string? DecryptSecret(string? enc) => TraeTools.Platform.Secrets.Unprotect(enc);
 }

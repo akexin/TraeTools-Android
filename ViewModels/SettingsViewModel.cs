@@ -97,10 +97,13 @@ public partial class SettingsViewModel : ViewModelBase
     private AccountInfo? _selectedAccount;
 
     // 关于区块属性
-    public string OriginalRepoUrl => "https://github.com/star620/TraeTools";
-    public string ForkRepoUrl => "https://github.com/star620/TraeTools";
-    public string IssuesUrl => "https://github.com/star620/TraeTools/issues";
+    public string OriginalRepoUrl => "https://github.com/akexin/TraeTools-Android";
+    public string ForkRepoUrl => "https://github.com/akexin/TraeTools-Android";
+    public string IssuesUrl => "https://github.com/akexin/TraeTools-Android/issues";
     public string AppVersion => TraeTools.Services.AppVersion.Display;
+
+    /// <summary>开机自启 / 托盘驻留是否可用：仅 Windows 桌面端（Android 无注册表自启与系统托盘）。</summary>
+    public bool IsWindowsDesktopOnlyFeaturesSupported => OperatingSystem.IsWindows();
 
     public SettingsViewModel()
     {
@@ -580,7 +583,7 @@ public partial class SettingsViewModel : ViewModelBase
     {
         try
         {
-            Process.Start(new ProcessStartInfo(OriginalRepoUrl) { UseShellExecute = true });
+            TraeTools.Platform.BrowserLauncher.Open(OriginalRepoUrl);
         }
         catch { /* 忽略 */ }
     }
@@ -590,7 +593,7 @@ public partial class SettingsViewModel : ViewModelBase
     {
         try
         {
-            Process.Start(new ProcessStartInfo(ForkRepoUrl) { UseShellExecute = true });
+            TraeTools.Platform.BrowserLauncher.Open(ForkRepoUrl);
         }
         catch { /* 忽略 */ }
     }
@@ -600,7 +603,7 @@ public partial class SettingsViewModel : ViewModelBase
     {
         try
         {
-            Process.Start(new ProcessStartInfo(IssuesUrl) { UseShellExecute = true });
+            TraeTools.Platform.BrowserLauncher.Open(IssuesUrl);
         }
         catch { /* 忽略 */ }
     }
@@ -628,8 +631,7 @@ public partial class SettingsViewModel : ViewModelBase
         try
         {
             var flag = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                "TraeTools", "eula_accepted");
+                TraeTools.Services.DataPaths.Root, "eula_accepted");
             if (File.Exists(flag)) File.Delete(flag);
         }
         catch { /* 删除失败不阻塞退出 */ }
@@ -718,7 +720,7 @@ public partial class SettingsViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// 为源仓库点 star：已授权 GitHub 时调用 GitHub API 点赞（star620/TRAE-Checkin）；
+    /// 为源仓库点 star：已授权 GitHub 时调用 GitHub API 点赞（akexin/TraeTools-Android）；
     /// 未授权或仓库 owner 本人时打开仓库主页由用户手动点赞。
     /// </summary>
     [RelayCommand]
@@ -731,14 +733,14 @@ public partial class SettingsViewModel : ViewModelBase
             if (cfg == null || gh == null)
             {
                 // 服务未初始化：直接打开仓库主页
-                Process.Start(new ProcessStartInfo(OriginalRepoUrl) { UseShellExecute = true });
+                TraeTools.Platform.BrowserLauncher.Open(OriginalRepoUrl);
                 return;
             }
 
             if (string.IsNullOrEmpty(cfg.GitHubToken))
             {
                 PushStatus = "尚未授权 GitHub，已打开仓库主页，请手动点赞";
-                Process.Start(new ProcessStartInfo(OriginalRepoUrl) { UseShellExecute = true });
+                TraeTools.Platform.BrowserLauncher.Open(OriginalRepoUrl);
                 return;
             }
 
@@ -753,7 +755,7 @@ public partial class SettingsViewModel : ViewModelBase
             {
                 // 仓库 owner 本人无需自赞，打开主页浏览
                 PushStatus = "您是该仓库的维护者，无需为自己点赞";
-                Process.Start(new ProcessStartInfo(OriginalRepoUrl) { UseShellExecute = true });
+                TraeTools.Platform.BrowserLauncher.Open(OriginalRepoUrl);
                 return;
             }
 
@@ -796,6 +798,21 @@ public partial class SettingsViewModel : ViewModelBase
 
             PushStatus = $"发现新版本 {rel.Tag}";
             var owner = UiHost.MainWindow;
+#if ANDROID
+            // Android：不自动下载/安装（应用内无法自行替换 APK，且不做强制更新）。
+            // 仅提示并引导到 Release 页面，用户自主决定是否下载安装。
+            var ask = new PromptWindow("发现新版本",
+                $"发现新版本 {rel.Tag}\n（当前 {AppVersion}，约 {Math.Max(1, (long)(rel.Size / 1048576.0))} MB）\n\n是否前往 GitHub 下载页获取新版 APK？（不会自动安装，下载后手动安装即可）",
+                "前往下载", "以后再说");
+            bool gotoDownload = owner != null ? await ask.ShowDialog<bool>(owner) : false;
+            if (!gotoDownload)
+            {
+                PushStatus = "已取消更新（当前版本可继续使用）";
+                return;
+            }
+            TraeTools.Platform.BrowserLauncher.Open(rel.HtmlUrl);
+            PushStatus = "已打开下载页：下载 APK 后手动安装即可";
+#else
             var ask = new PromptWindow("发现新版本",
                 $"发现新版本 {rel.Tag}\n（当前 {AppVersion}，约 {Math.Max(1, (long)(rel.Size / 1048576.0))} MB）\n\n是否下载并自动安装？",
                 "下载并安装", "取消");
@@ -832,6 +849,7 @@ public partial class SettingsViewModel : ViewModelBase
             {
                 PushStatus = "更新失败：" + ex.Message;
             }
+#endif // !ANDROID
         }
         catch (Exception ex)
         {

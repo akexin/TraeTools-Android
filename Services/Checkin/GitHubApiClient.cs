@@ -70,8 +70,8 @@ public class WorkflowRunInfo
 public class GitHubApiClient
 {
     private const string ClientId = "Ov23lix0Kb9ldJHrOpKv";
-    private const string SourceOwner = "star620";
-    private const string SourceRepo = "TraeTools";
+    private const string SourceOwner = "akexin";
+    private const string SourceRepo = "TraeTools-Android";
     public const string SessionSecretName = "TRAE_SESSION";
     public const string DeviceIdSecretName = "TRAE_DEVICE_ID";
     public const string FeishuWebhookSecretName = "FEISHU_WEBHOOK";
@@ -265,7 +265,7 @@ public class GitHubApiClient
             ? "fork 失败：GitHub 授权已失效（HTTP 401），请先「重新授权」再部署。"
             : (statusCode == 403
                 ? "fork 失败：Token 对源仓库没有 fork 权限（HTTP 403）。建 fork 不靠 Actions/Secrets/Contents 那批写权限——"
-                  + "请改为：① 细粒度 PAT → Repository access 选中 star620/TraeTools（若已 fork 另加你自己的 fork 仓库），"
+                  + "请改为：① 细粒度 PAT → Repository access 选中 akexin/TraeTools-Android（若已 fork 另加你自己的 fork 仓库），"
                   + "并在 Permissions 开启 Administration: Read and write（其中含 fork）；"
                   + "② classic PAT / 设备码授权 → 需包含 repo scope。按此调整后需重新生成 Token/重新授权。"
                 : $"fork 失败：HTTP {statusCode}");

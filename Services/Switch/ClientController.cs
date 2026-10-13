@@ -9,10 +9,25 @@ public interface IClientController
     bool IsRunning();
 }
 
-/// <summary>真实进程控制：按进程名结束全部实例并重新拉起客户端。</summary>
+#if !ANDROID
+/// <summary>真实进程控制：按进程名结束全部实例并重新拉起客户端。
+/// 进程名支持逗号分隔的多个名字（2026-10 TraeWork/TraeCode 合并为 TRAE 后，
+/// 过渡期内新旧客户端进程名并存，均参与匹配）。</summary>
 public sealed class ClientController(string processName, string exePath) : IClientController
 {
+    /// <summary>拆分后的进程名列表（去空、去重）。</summary>
+    private string[] ProcessNames => processName
+        .Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .ToArray();
+
     public void KillAll()
+    {
+        foreach (var name in ProcessNames)
+            KillByName(name);
+    }
+
+    private void KillByName(string processName)
     {
         // 拿到的 Process 对象使用后必须 Dispose，否则常驻托盘下句柄持续累积（#33）
         Process[] procs;
@@ -21,7 +36,8 @@ public sealed class ClientController(string processName, string exePath) : IClie
         foreach (var p in procs)
         {
             try { p.Kill(entireProcessTree: true); p.WaitForExit(10_000); } catch { /* 已退出则忽略 */ }
-            finally { try { p.Dispose(); } catch { /* 忽略 */ } }
+            finally { try { p.Dispose(); } catch { /* 忽略 */ }
+            }
         }
     }
 
@@ -32,18 +48,31 @@ public sealed class ClientController(string processName, string exePath) : IClie
         Process.Start(new ProcessStartInfo(exePath) { UseShellExecute = true });
     }
 
-    public bool IsRunning() => GetProcessCount() > 0;
+    public bool IsRunning() => ProcessNames.Sum(GetProcessCount) > 0;
 
     /// <summary>查询进程数并立即释放全部 Process 句柄（GetProcessesByName 返回的对象必须 Dispose）。</summary>
-    private int GetProcessCount()
+    private int GetProcessCount(string name)
     {
         try
         {
-            Process[] procs = Process.GetProcessesByName(processName);
-            int n = procs.Length;
+            var procs = Process.GetProcessesByName(name);
+            var n = procs.Length;
             foreach (var p in procs) try { p.Dispose(); } catch { /* 忽略 */ }
             return n;
         }
         catch { return 0; }
     }
 }
+#endif // !ANDROID
+
+#if ANDROID
+namespace TraeSwitch.Services;
+
+/// <summary>Android 空实现：账号切换需要操作本地 Trae 客户端进程/文件，仅 Windows 桌面端支持。</summary>
+public sealed class ClientController(string processName, string exePath) : IClientController
+{
+    public void KillAll() { }
+    public void Launch() => throw new PlatformNotSupportedException("账号切换仅支持 Windows 桌面端");
+    public bool IsRunning() => false;
+}
+#endif

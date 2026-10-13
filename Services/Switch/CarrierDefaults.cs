@@ -1,11 +1,30 @@
+#if !ANDROID
 namespace TraeSwitch.Services;
 
 public static class CarrierDefaults
 {
     public static string SettingsDir => TraeTools.Services.DataPaths.SwitchDir;
 
+    /// <summary>历史默认用户数据目录（TraeWork 时代）。2026-10 起新旧客户端已合并为 TRAE，
+    /// 若该目录不存在会自动回落到新 TRAE 数据目录（见 ResolveUserDataDir）。</summary>
     public static string DefaultUserDataDir =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "TRAE SOLO CN");
+
+    /// <summary>新版 TRAE 客户端用户数据目录名（2026-10 TraeWork 与 TraeCode 合并后统一为 TRAE）。</summary>
+    private static readonly string[] NewUserDataDirNames = { "TRAE", "TRAE CN" };
+
+    /// <summary>解析实际使用的客户端用户数据目录：历史目录优先，不存在则取新版目录中第一个存在的。</summary>
+    public static string ResolveUserDataDir()
+    {
+        if (Directory.Exists(DefaultUserDataDir)) return DefaultUserDataDir;
+        var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        foreach (var name in NewUserDataDirNames)
+        {
+            var path = Path.Combine(appData, name);
+            if (Directory.Exists(path)) return path;
+        }
+        return DefaultUserDataDir;
+    }
 
     /// <summary>
     /// 默认 Trae 客户端可执行文件路径。
@@ -28,7 +47,9 @@ public static class CarrierDefaults
         }
     }
 
-    public static string DefaultProcessName => "TRAE SOLO CN";
+    /// <summary>默认进程名：2026-10 起 TraeWork 与 TraeCode 合并为统一的 TRAE 客户端；
+    /// 过渡期内旧客户端（TRAE SOLO CN）仍在运行，多进程名逗号分隔，均会参与匹配。</summary>
+    public static string DefaultProcessName => "TRAE,TRAE SOLO CN,Trae";
 
     private static readonly object DetectLock = new();
     private static string _detectedExe = "";
@@ -40,12 +61,15 @@ public static class CarrierDefaults
     public static string? AutoDetectClientExe()
     {
         const string exeName = "TRAE SOLO CN.exe";
+        const string newExeName = "TRAE.exe";
         foreach (var dir in CandidateClientDirs())
         {
             try
             {
                 var exact = Path.Combine(dir, exeName);
                 if (File.Exists(exact)) return exact;
+                var exactNew = Path.Combine(dir, newExeName);
+                if (File.Exists(exactNew)) return exactNew;
 
                 // 目录内 exe：名字含 TRAE（如 Trae.exe）优先；否则目录里只有一个 exe 时采用它（#25：Program Files 安装可能主程序名不同）
                 var exes = Directory.GetFiles(dir, "*.exe");
@@ -59,16 +83,22 @@ public static class CarrierDefaults
         return null;
     }
 
-    /// <summary>候选客户端目录：历史默认 + 各常见位置 + 任意固定盘（C/D/E…）的 Program Files / Program Files (x86)。</summary>
+    /// <summary>候选客户端目录：历史默认 + 各常见位置 + 任意固定盘（C/D/E…）的 Program Files / Program Files (x86)。
+    /// 2026-10 双端合并后同时覆盖新版 TRAE 与旧版 TRAE SOLO CN 的目录名。</summary>
     private static List<string> CandidateClientDirs()
     {
         var dirs = new List<string>
         {
             @"D:\TRAE SOLO CN",                                                               // 历史默认（D 盘安装）
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "TRAE SOLO CN"), // 绿色版/便携版
+            @"D:\TRAE",                                                                       // 新版默认（D 盘安装）
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "TRAE SOLO CN"), // 绿色版/便携版（旧）
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "TRAE"),         // 绿色版/便携版（新）
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "TRAE SOLO CN"),
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "TRAE"),
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "TRAE SOLO CN"),
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "TRAE"),
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TRAE SOLO CN"),
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TRAE"),
         };
         try
         {
@@ -76,7 +106,9 @@ public static class CarrierDefaults
             {
                 if (!drv.IsReady || drv.DriveType != DriveType.Fixed) continue;
                 dirs.Add(Path.Combine(drv.RootDirectory.FullName, "Program Files", "TRAE SOLO CN"));
+                dirs.Add(Path.Combine(drv.RootDirectory.FullName, "Program Files", "TRAE"));
                 dirs.Add(Path.Combine(drv.RootDirectory.FullName, "Program Files (x86)", "TRAE SOLO CN"));
+                dirs.Add(Path.Combine(drv.RootDirectory.FullName, "Program Files (x86)", "TRAE"));
             }
         }
         catch { /* 枚举磁盘失败忽略 */ }
@@ -91,7 +123,7 @@ public static class CarrierDefaults
     public static List<string> DetectFingerprint()
     {
         var found = new List<string>();
-        var root = DefaultUserDataDir;
+        var root = ResolveUserDataDir();
         if (!Directory.Exists(root)) return found;
         try
         {
@@ -128,3 +160,4 @@ public static class CarrierDefaults
         return result;
     }
 }
+#endif // !ANDROID

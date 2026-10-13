@@ -1,17 +1,17 @@
 using System;
-using System.Diagnostics;
 using System.IO;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using TraeCheckin;
-using TraeTools.Services.Login;
+using TraeTools.Platform;
 using TraeTools.ViewModels;
 
 namespace TraeTools.Views;
 
 /// <summary>
-/// 登录窗口：优先使用内嵌 WebView2 自动登录（自动读取 token + session），
-/// 也保留手动粘贴 Cloud-IDE-Token 的备选方案。
+/// 登录窗口：
+///   Windows 桌面端：内嵌 WebView2 自动登录（自动读取 token + session）+ 手动粘贴备选；
+///   Android：无 WebView2，隐藏自动登录入口，仅保留「打开浏览器登录 + 粘贴 Token」手动方案。
 /// </summary>
 public partial class LoginWindow : Window
 {
@@ -21,6 +21,12 @@ public partial class LoginWindow : Window
     public LoginWindow()
     {
         InitializeComponent();
+#if ANDROID
+        // Android 无内嵌浏览器：隐藏自动登录区，手动方案升级为唯一方式
+        AutoLoginButton.IsVisible = false;
+        AutoLoginHint.IsVisible = false;
+        ManualHint.Text = "手机端请点击下方「打开浏览器登录」，登录后按开发者教程复制 Cloud-IDE-Token 粘贴保存。";
+#endif
     }
 
     public LoginWindow(TraeAccount? account)
@@ -29,6 +35,7 @@ public partial class LoginWindow : Window
         _account = account;
     }
 
+#if !ANDROID
     /// <summary>内嵌 WebView2 自动登录：独立 STA 线程宿主，自动读取 Cloud-IDE-Token 与 X-Cloudide-Session。</summary>
     private async void OnAutoLoginClick(object? sender, RoutedEventArgs e)
     {
@@ -59,7 +66,7 @@ public partial class LoginWindow : Window
                 "TraeTools", "WebView", "account_" + (_account.Id.Length > 12 ? _account.Id[..12] : _account.Id));
 
             // 接口探索已完成；false=正常登录（自动识别并关闭窗口）。需要再抓包时改为 true
-            var result = await WebViewLoginHost.RunAsync(webViewDir, _account.Token, debugCapture: false);
+            var result = await TraeTools.Services.Login.WebViewLoginHost.RunAsync(webViewDir, _account.Token, debugCapture: false);
 
             if (result == null)
             {
@@ -84,11 +91,11 @@ public partial class LoginWindow : Window
             _busy = false;
         }
     }
+#endif
 
     private void OnOpenBrowserClick(object? sender, RoutedEventArgs e)
     {
-        try { Process.Start(new ProcessStartInfo("https://www.trae.cn") { UseShellExecute = true }); }
-        catch { /* 打开失败忽略 */ }
+        BrowserLauncher.Open("https://www.trae.cn");
     }
 
     private void OnSaveClick(object? sender, RoutedEventArgs e)

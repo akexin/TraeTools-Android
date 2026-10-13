@@ -11,12 +11,12 @@
         </Border>
 
         <Border Grid.Row="1" Padding="16,14"><StackPanel Spacing="12">
-            <!-- 内嵌浏览器自动登录（首选） -->
-            <TextBlock TextWrapping="Wrap" FontSize="12.5" Foreground="#FF0F172A" LineHeight="20">
+            <!-- 内嵌浏览器自动登录（首选；仅 Windows 桌面端可用） -->
+            <TextBlock x:Name="AutoLoginHint" TextWrapping="Wrap" FontSize="12.5" Foreground="#FF0F172A" LineHeight="20">
 推荐：点击下方「自动登录」将弹出内嵌浏览器窗口，登录成功后自动读取凭证，无需手动复制。
             </TextBlock>
             <StackPanel Orientation="Horizontal" Spacing="10">
-                <Button Content="自动登录（内嵌浏览器）" Click="OnAutoLoginClick" Classes="btn-primary"
+                <Button x:Name="AutoLoginButton" Content="自动登录（内嵌浏览器）" Click="OnAutoLoginClick" Classes="btn-primary"
                         HorizontalAlignment="Left" MinWidth="190" Height="40" Padding="16,0"
                         HorizontalContentAlignment="Center" VerticalContentAlignment="Center" />
                 <TextBlock x:Name="AutoStatus" FontSize="11" Foreground="#FF92400E" VerticalAlignment="Center" />
@@ -24,8 +24,8 @@
 
             <Border Height="1" Background="#FFE2E8F0" Margin="0,6" />
 
-            <!-- 手动方案（备选） -->
-            <TextBlock TextWrapping="Wrap" FontSize="12" Foreground="#FF64748B" LineHeight="19">
+            <!-- 手动方案（Android 端唯一方式；Windows 端为备选） -->
+            <TextBlock x:Name="ManualHint" TextWrapping="Wrap" FontSize="12" Foreground="#FF64748B" LineHeight="19">
 备选：手动打开浏览器登录后复制 Cloud-IDE-Token 粘贴保存。
             </TextBlock>
             <Button Content="打开浏览器登录" Click="OnOpenBrowserClick" Classes="btn"

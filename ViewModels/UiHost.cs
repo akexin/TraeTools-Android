@@ -8,5 +8,17 @@ namespace TraeTools.ViewModels;
 internal static class UiHost
 {
     public static Window? MainWindow
-        => (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
+    {
+        get
+        {
+            var lifetime = Application.Current?.ApplicationLifetime;
+            if (lifetime is IClassicDesktopStyleApplicationLifetime desktop)
+                return desktop.MainWindow;
+#if ANDROID
+            if (lifetime is ISingleViewApplicationLifetime singleView && singleView.MainView is Window w)
+                return w;
+#endif
+            return null;
+        }
+    }
 }

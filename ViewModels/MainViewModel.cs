@@ -37,6 +37,9 @@ public partial class MainViewModel : ViewModelBase
     /// <summary>界面展示的应用版本号，与"关于/更新检查"（TraeTools.Services.AppVersion）同源。</summary>
     public string AppVersion => Services.AppVersion.Display;
 
+    /// <summary>账号切换是否可用：仅 Windows 桌面端（Android 无本地 Trae 客户端进程/文件可操作）。</summary>
+    public bool IsSwitchSupported => !OperatingSystem.IsAndroid();
+
     public MainViewModel()
     {
         // 初始化真实服务（try-catch，失败则为 null，页面 VM 用 mock 兜底）

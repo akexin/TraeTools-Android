@@ -3,15 +3,26 @@ using System.IO;
 namespace TraeTools.Services;
 
 /// <summary>
-/// 统一数据根目录（%APPDATA%\TraeTools），收敛历史遗留的 TraeCheckin / TraeSwitch 三个目录。
-/// WebView 缓存与抓包输出保持在 %LOCALAPPDATA%\TraeTools（缓存不进 APPDATA）。
+/// 统一数据根目录（Windows：%APPDATA%\TraeTools；Android：App 私有目录 files/TraeTools），
+/// 收敛历史遗留的 TraeCheckin / TraeSwitch 三个目录。
+/// WebView 缓存与抓包输出保持在 %LOCALAPPDATA%\TraeTools（缓存不进 APPDATA；Android 无此概念）。
 /// 启动时调用 Migrate() 把旧目录数据自动搬入新位置（幂等、失败不阻塞）。
 /// </summary>
 public static class DataPaths
 {
-    /// <summary>根目录：%APPDATA%\TraeTools</summary>
-    public static string Root =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "TraeTools");
+    /// <summary>根目录：Windows=%APPDATA%\TraeTools；Android=App files/TraeTools</summary>
+    public static string Root
+    {
+        get
+        {
+#if ANDROID
+            var ctx = Android.App.Application.Context!;
+            return System.IO.Path.Combine(ctx.FilesDir!.AbsolutePath, "TraeTools");
+#else
+            return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "TraeTools");
+#endif
+        }
+    }
 
     /// <summary>签到配置 config.json。</summary>
     public static string ConfigPath => Path.Combine(Root, "config.json");

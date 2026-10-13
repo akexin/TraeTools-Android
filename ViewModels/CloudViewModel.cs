@@ -275,7 +275,7 @@ public partial class CloudViewModel : ViewModelBase
         }
         catch { /* 复制失败不阻断 */ }
 
-        try { Process.Start(new ProcessStartInfo(code.VerificationUri) { UseShellExecute = true }); }
+        try { TraeTools.Platform.BrowserLauncher.Open(code.VerificationUri); }
         catch (Exception ex)
         {
             AppendLog("自动打开浏览器失败，请手动访问：" + code.VerificationUri + "（" + ex.Message + "）");
@@ -591,9 +591,9 @@ public partial class CloudViewModel : ViewModelBase
     {
         try
         {
-            var owner = string.IsNullOrEmpty(GitHubUser) ? "star620" : GitHubUser;
+            var owner = string.IsNullOrEmpty(GitHubUser) ? "akexin" : GitHubUser;
             var url = $"https://github.com/{owner}/{ForkRepo}/actions";
-            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+            TraeTools.Platform.BrowserLauncher.Open(url);
             AppendLog($"已在浏览器打开：{url}");
         }
         catch (Exception ex)

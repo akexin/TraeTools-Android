@@ -17,7 +17,7 @@ public partial class PatInputWindow : Window
 
     private void OnOpenGithubClick(object? sender, RoutedEventArgs e)
     {
-        try { Process.Start(new ProcessStartInfo("https://github.com/settings/personal-access-tokens/new") { UseShellExecute = true }); }
+        try { TraeTools.Platform.BrowserLauncher.Open("https://github.com/settings/personal-access-tokens/new"); }
         catch { /* 打开失败忽略 */ }
     }
 

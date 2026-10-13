@@ -57,7 +57,7 @@ public partial class DeviceAuthWindow : Window
     private void OpenPage(GitHubDeviceCode code)
     {
         
-        try { Process.Start(new ProcessStartInfo(code.VerificationUri) { UseShellExecute = true }); }
+        try { TraeTools.Platform.BrowserLauncher.Open(code.VerificationUri); }
         catch (Exception ex) { StatusText.Text = "自动打开浏览器失败，请手动访问：" + code.VerificationUri + "（" + ex.Message + "）"; }
     }
 

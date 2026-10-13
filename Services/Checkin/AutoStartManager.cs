@@ -1,4 +1,5 @@
-﻿using Microsoft.Win32;
+﻿#if !ANDROID
+using Microsoft.Win32;
 
 namespace TraeCheckin;
 
@@ -44,3 +45,5 @@ internal static class AutoStartManager
         catch { /* 静默失败 */ }
     }
 }
+
+#endif // !ANDROID

@@ -16,7 +16,7 @@
         <ScrollViewer Grid.Row="1" Background="White">
             <StackPanel Margin="16,12" Spacing="12">
                 <TextBlock FontSize="12" Foreground="#FF0F172A" LineHeight="20" TextWrapping="Wrap" Text="自动打开 GitHub 创建页可简化操作：
-1）点下方「打开 GitHub 创建页」进入 Fine-grained Token 页面；Repository access 勾选 TraeTools。
+1）点下方「打开 GitHub 创建页」进入 Fine-grained Token 页面；Repository access 勾选 akexin/TraeTools-Android。
 2）Permissions：Actions / Contents / Pull requests / Secrets / Workflows 均选 Read and write。
 3）生成后把 github_pat_ 开头的 Token 粘贴到下方输入框，点「确定」。" />
                 <Button Content="打开 GitHub 创建页" Classes="btn" HorizontalAlignment="Left" MinWidth="160" Height="34"

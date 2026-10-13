@@ -62,7 +62,8 @@ jobs:
             echo "TraeTools ${GITHUB_REF_NAME}"
             echo ""
             echo "- 单文件自包含 Windows x64 程序（无需额外安装 .NET 运行时）"
-            echo "- 应用内「检查更新」会下载本 Release 的 \`TraeTools.exe\` 自动替换升级"
+            echo "- Android 手机版 APK（Android 8.0+，见 TraeTools-Android.apk）"
+            echo "- 应用内「检查更新」为**非强制**：仅提示并引导下载，不会自动替换安装"
             echo ""
             if [ -n "${PREV}" ]; then
               echo "## 更新差异（${PREV} → ${GITHUB_REF_NAME}）"
@@ -84,4 +85,37 @@ jobs:
           files: |
             publish/TraeTools.exe
             TraeTools-win-x64.zip
+          generate_release_notes: false
+
+  publish-android:
+    runs-on: ubuntu-latest
+    needs: publish          # 等 Windows  job 创建好 Release 后再追加 APK 资产
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+
+      - name: Install Android workload
+        run: dotnet workload install android
+
+      # Android APK：debug 签名（可直接安装）；签名 keystore 后续在仓库 Secrets 配置后改为 release 签名
+      - name: Publish (android apk)
+        run: dotnet publish TraeTools.csproj -c Release -f net9.0-android -p:AndroidPackageFormat=apk -o publish-android
+
+      - name: Collect apk
+        run: |
+          APK=$(find publish-android -name "*.apk" | head -1)
+          if [ -z "$APK" ]; then echo "::error::no apk produced"; exit 1; fi
+          cp "$APK" TraeTools-Android.apk
+          ls -lh TraeTools-Android.apk
+
+      - name: Upload apk to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "TraeTools ${{ github.ref_name }}"
+          files: TraeTools-Android.apk
           generate_release_notes: false

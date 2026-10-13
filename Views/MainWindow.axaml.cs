@@ -9,18 +9,31 @@ namespace TraeTools.Views;
 
 public partial class MainWindow : Window
 {
+    /// <summary>自动签到定时器（双平台）：每 30 秒检查一次，到点且当天未签时自动签到。</summary>
     private readonly DispatcherTimer _autoCheckinTimer;
+#if !ANDROID
     private TrayIcon? _trayIcon;
     /// <summary>true=用户从托盘「退出」真正退出；false=关闭窗口仅最小化到托盘。 </summary>
     private bool _realExit;
     /// <summary>计时器重入守卫：上一轮任务（可能数十秒）未结束前跳过本轮 Tick（#33）。</summary>
     private bool _tickBusy;
     private readonly WindowNotificationManager _notify;
+#endif
 
     public MainWindow()
     {
+#if !ANDROID
         _notify = new WindowNotificationManager(this) { Position = NotificationPosition.BottomRight, MaxItems = 3 };
+#endif
         InitializeComponent();
+
+#if !ANDROID
+        // 桌面端固定窗口尺寸与居中（Android 端为全屏单视图，Width/Height 不适用）
+        Width = 1100;
+        Height = 720;
+        MinWidth = 940;
+        MinHeight = 600;
+        WindowStartupLocation = WindowStartupLocation.CenterScreen;
 
         // 任务栏窗口图标：复用托盘同款 avalonia-logo.ico（缺省时任务栏不显示图标）
         try
@@ -29,43 +42,55 @@ public partial class MainWindow : Window
             Icon = new WindowIcon(iconStream);
         }
         catch { /* 图标加载失败不影响主程序 */ }
+#endif
 
-        // 自动签到定时器：每 30 秒检查一次，到点且当天未签时自动签到
         _autoCheckinTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
         // 防重入：上一轮未结束则跳过本轮，避免长任务在常驻托盘场景下叠加（#33）
         _autoCheckinTimer.Tick += async (_, _) =>
         {
+#if !ANDROID
             if (_tickBusy) return;
             _tickBusy = true;
             try
             {
+#endif
                 if (DataContext is MainViewModel vm)
                 {
                     await vm.AutoCheckinIfDue();
+#if !ANDROID
                     await vm.RefreshSnapshotIfNeeded();
+#endif
                 }
+#if !ANDROID
             }
             finally { _tickBusy = false; }
+#endif
         };
 
+#if !ANDROID
         BuildTray();
         Closing += OnWindowClosing;
+#endif
     }
 
     protected override void OnOpened(EventArgs e)
     {
         base.OnOpened(e);
         OnOpenedEulaCheck();
+        // Android 端自动签到仅 App 运行期间有效；无人值守场景请使用「云端签到」
         _autoCheckinTimer.Start();
     }
 
     protected override void OnClosed(EventArgs e)
     {
         _autoCheckinTimer.Stop();
+#if !ANDROID
         _trayIcon?.Dispose();
+#endif
         base.OnClosed(e);
     }
 
+#if !ANDROID
     /// <summary>关闭窗口默认最小化到托盘（与 TraeCheckin 一致）；仅托盘「退出」真正退出。</summary>
     private void OnWindowClosing(object? sender, WindowClosingEventArgs e)
     {
@@ -105,6 +130,7 @@ public partial class MainWindow : Window
             };
             // 左键单击托盘图标 → 显示/激活主窗口
             _trayIcon.Clicked += (_, _) => ShowAndActivate();
+            App.TrayRef = _trayIcon;
         }
         catch
         {
@@ -130,17 +156,17 @@ public partial class MainWindow : Window
                 ok ? NotificationType.Success : NotificationType.Error));
         }
     }
+#endif
 
     /// <summary>
-    /// 首次启动弹出免责声明协议（EULA）。同意标记独立存放于 %APPDATA%\TraeTools\eula_accepted，
+    /// 首次启动弹出免责声明协议（EULA）。同意标记独立存放于数据根目录 eula_accepted，
     /// 与 TraeCheckin 的已同意配置互相独立，保证本程序首次启动必定展示协议；
     /// 不同意则直接退出。
     /// </summary>
     private async void OnOpenedEulaCheck()
     {
         var flag = System.IO.Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "TraeTools", "eula_accepted");
+            TraeTools.Services.DataPaths.Root, "eula_accepted");
         if (System.IO.File.Exists(flag)) return;
 
         var eula = new EulaWindow();
@@ -156,10 +182,10 @@ public partial class MainWindow : Window
         }
         else
         {
+#if !ANDROID
             _realExit = true;
+#endif
             Close();
         }
     }
 }
-
-

@@ -7,9 +7,6 @@
         x:Class="TraeTools.Views.MainWindow"
         x:DataType="vm:MainViewModel"
         Title="TraeTools"
-        Width="1100" Height="720"
-        MinWidth="940" MinHeight="600"
-        WindowStartupLocation="CenterScreen"
         Background="{StaticResource ContentBgBrush}"
         FontFamily="Inter,Microsoft YaHei UI,Segoe UI">
 
@@ -55,7 +52,9 @@
                             <TextBlock Text="每日签到" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
+                    <!-- 账号切换：仅 Windows 桌面端可用（Android 无本地 Trae 客户端可操作） -->
                     <Button Classes="nav-item" Classes.nav-item-active="{Binding IsSwitchActive}"
+                            IsVisible="{Binding IsSwitchSupported}"
                             Command="{Binding NavigateCommand}" CommandParameter="switch">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="⇄" FontSize="14" Width="20" TextAlignment="Center" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="White" />

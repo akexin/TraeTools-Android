@@ -12,7 +12,7 @@ namespace TraeTools.Services;
 /// </summary>
 public static class UpdaterService
 {
-    public const string Repo = "star620/TraeTools";
+    public const string Repo = "akexin/TraeTools-Android";
     private static readonly HttpClient Http = CreateHttp();
 
     private static HttpClient CreateHttp()
@@ -39,7 +39,11 @@ public static class UpdaterService
         }
     }
 
-    public sealed record ReleaseInfo(string Tag, Version Version, string ExeUrl, long Size);
+    public sealed record ReleaseInfo(string Tag, Version Version, string ExeUrl, long Size)
+    {
+        /// <summary>Release 网页地址（Android 端跳转浏览器下载用）。</summary>
+        public string HtmlUrl { get; init; } = "";
+    }
 
     // GitHub 匿名 API 每小时最多 60 次；自动检查若紧跟频繁启动会很快耗尽配额（返回 403）。
     // 用 1 小时磁盘缓存：自动（静默）检查在窗口内直接沿用上次结论，不反复打 API。
@@ -116,7 +120,12 @@ public static class UpdaterService
         {
             foreach (var a in assets.EnumerateArray())
             {
+#if ANDROID
+                // Android：下载 Release 中的 apk 资产（CI 产物 TraeTools-Android.apk）
+                if (a.GetProperty("name").GetString()?.EndsWith(".apk", StringComparison.OrdinalIgnoreCase) == true)
+#else
                 if (string.Equals(a.GetProperty("name").GetString(), "TraeTools.exe", StringComparison.OrdinalIgnoreCase))
+#endif
                 {
                     exeUrl = a.GetProperty("browser_download_url").GetString();
                     size = a.TryGetProperty("size", out var s) ? s.GetInt64() : 0;
@@ -124,7 +133,8 @@ public static class UpdaterService
                 }
             }
         }
-        return exeUrl == null ? null : new ReleaseInfo(tag.GetString()!, ver, exeUrl, size);
+        var htmlUrl = root.TryGetProperty("html_url", out var h) ? h.GetString() ?? "" : "";
+        return exeUrl == null ? null : new ReleaseInfo(tag.GetString()!, ver, exeUrl, size) { HtmlUrl = htmlUrl };
     }
 
     /// <summary>把 "v1.2.3" / "1.2.3" / "1.2.3-beta" 解析为 Version；失败返回 false。</summary>
