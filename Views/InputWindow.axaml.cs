@@ -8,8 +8,11 @@ namespace TraeTools.Views;
 /// 通用单行文本输入窗口。ShowDialog&lt;string&gt; 返回：true 路径关窗时返回输入文本（trim 后），
 /// 取消返回 null。
 /// </summary>
-public partial class InputWindow : Window
+public partial class InputWindow : UserControl
 {
+    /// <summary>桌面端承载窗口的标题（Android 单视图无窗口标题栏，不使用）。</summary>
+    public string DialogTitle { get; set; } = "输入";
+
     public string? ResultText { get; private set; }
 
     public InputWindow()
@@ -23,6 +26,7 @@ public partial class InputWindow : Window
     public InputWindow(string title, string message, string placeholder)
         : this()
     {
+        DialogTitle = title;
         TitleText.Text = title;
         MessageText.Text = message;
         InputBox.PlaceholderText = placeholder;

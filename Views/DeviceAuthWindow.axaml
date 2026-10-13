@@ -1,8 +1,7 @@
-<Window xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="TraeTools.Views.DeviceAuthWindow"
-        Title="GitHub 授权" Width="500"
-        SizeToContent="Height" WindowStartupLocation="CenterOwner"
+        Width="500" MaxWidth="620"
         Background="White"
         FontFamily="Microsoft YaHei UI,Segoe UI">
     <Border Background="White" Padding="22">
@@ -30,4 +29,4 @@
             </StackPanel>
         </StackPanel>
     </Border>
-</Window>
+</UserControl>

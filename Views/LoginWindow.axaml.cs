@@ -13,8 +13,11 @@ namespace TraeTools.Views;
 ///   Windows 桌面端：内嵌 WebView2 自动登录（自动读取 token + session）+ 手动粘贴备选；
 ///   Android：无 WebView2，隐藏自动登录入口，仅保留「打开浏览器登录 + 粘贴 Token」手动方案。
 /// </summary>
-public partial class LoginWindow : Window
+public partial class LoginWindow : UserControl
 {
+    /// <summary>桌面端承载窗口的标题（Android 单视图无窗口标题栏，不使用）。</summary>
+    public string DialogTitle { get; set; } = "登录 TRAE 账号";
+
     private readonly TraeAccount? _account;
     private bool _busy;
 

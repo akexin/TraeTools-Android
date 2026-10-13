@@ -628,7 +628,7 @@ public partial class DashboardViewModel : ViewModelBase
             var owner = UiHost.MainWindow;
             var acc = cfg?.Accounts.FirstOrDefault(a => a.Id == cfg.ActiveAccountId)
                       ?? cfg?.Accounts.FirstOrDefault();
-            if (cfg == null || owner == null || acc == null) return;
+            if (cfg == null || acc == null) return;
             var dlg = new Views.LoginWindow(acc);
             bool ok = await Views.OverlayDialog.ShowAsync<bool>(dlg, owner);
             if (ok)

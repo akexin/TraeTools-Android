@@ -6,8 +6,11 @@ using Avalonia.Interactivity;
 namespace TraeTools.Views;
 
 /// <summary>粘贴 GitHub PAT 的输入窗口：返回 true 表示已提交有效文本（访问 PatText 获取）。</summary>
-public partial class PatInputWindow : Window
+public partial class PatInputWindow : UserControl
 {
+    /// <summary>桌面端承载窗口的标题（Android 单视图无窗口标题栏，不使用）。</summary>
+    public string DialogTitle { get; set; } = "粘贴 GitHub Token（PAT）";
+
     public string? PatText { get; private set; }
 
     public PatInputWindow()

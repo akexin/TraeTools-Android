@@ -9,8 +9,11 @@ namespace TraeTools.Views;
 /// GitHub 设备码授权窗口。申请设备码→展示授权码→打开授权页→轮询授权结果，
 /// ShowDialog&lt;bool&gt; 返回是否授权成功；成功后通过 <see cref="AccessToken"/> 取回 token。
 /// </summary>
-public partial class DeviceAuthWindow : Window
+public partial class DeviceAuthWindow : UserControl
 {
+    /// <summary>桌面端承载窗口的标题（Android 单视图无窗口标题栏，不使用）。</summary>
+    public string DialogTitle { get; set; } = "GitHub 授权";
+
     private readonly GitHubApiClient _api = null!;
     private GitHubDeviceCode? _code;
     private bool _polling;

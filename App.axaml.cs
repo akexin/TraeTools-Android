@@ -59,12 +59,13 @@ public partial class App : Avalonia.Application
 
             try
             {
-                // Android：单视图生命周期，MainWindow 直接作为主视图全屏展示
-                singleView.MainView = new MainWindow
+                // Android：单视图生命周期，MainView（UserControl）作为根视图全屏展示。
+                // 不能用 MainWindow（Window）：单视图平台创建 Window 会抛 NotSupportedException。
+                singleView.MainView = new MainView
                 {
                     DataContext = new MainViewModel(),
                 };
-                CrashLog.Boot("App: single-view MainWindow created");
+                CrashLog.Boot("App: single-view MainView created");
             }
             catch (System.Exception ex)
             {
@@ -94,12 +95,12 @@ public partial class App : Avalonia.Application
             CrashLog.ClearFlag();
             try
             {
-                lifetime.MainView = new MainWindow { DataContext = new MainViewModel() };
-                CrashLog.Boot("App: retry create MainWindow ok");
+                lifetime.MainView = new MainView { DataContext = new MainViewModel() };
+                CrashLog.Boot("App: retry create MainView ok");
             }
             catch (System.Exception ex)
             {
-                CrashLog.Write("App: retry create MainWindow failed", ex, true);
+                CrashLog.Write("App: retry create MainView failed", ex, true);
             }
         });
     }

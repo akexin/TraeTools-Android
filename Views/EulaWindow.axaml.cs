@@ -7,8 +7,11 @@ namespace TraeTools.Views;
 /// 首次启动的最终用户许可协议弹窗（Avalonia 版）。
 /// ShowDialog&lt;bool&gt; 返回值：true=同意并继续，false=不同意并退出。
 /// </summary>
-public partial class EulaWindow : Window
+public partial class EulaWindow : UserControl
 {
+    /// <summary>桌面端承载窗口的标题（Android 单视图无窗口标题栏，不使用）。</summary>
+    public string DialogTitle { get; set; } = "TRAETOOLS 最终用户许可协议";
+
     public EulaWindow()
     {
         InitializeComponent();

@@ -301,7 +301,7 @@ public partial class SettingsViewModel : ViewModelBase
         {
             var cfg = MainViewModel.AppConfig;
             var owner = UiHost.MainWindow;
-            if (cfg == null || owner == null || cfg.Accounts.Count == 0)
+            if (cfg == null || cfg.Accounts.Count == 0)
             {
                 PushStatus = cfg == null || cfg.Accounts.Count == 0 ? "暂无账号，请先添加/登录账号" : "主窗口未就绪";
                 return;
@@ -313,7 +313,7 @@ public partial class SettingsViewModel : ViewModelBase
                 "用于多账号被风控（-9074 参与用户太多）时批量规避。\n" +
                 "更换后云端部署需重新「云端部署」同步新的 TRAE_DEVICE_ID*。\n\n是否继续？",
                 "全部更换", "取消");
-            bool ok = owner != null && await OverlayDialog.ShowAsync<bool>(ask, owner);
+            bool ok = await OverlayDialog.ShowAsync<bool>(ask, owner);
             if (!ok)
             {
                 PushStatus = "已取消";
@@ -470,7 +470,7 @@ public partial class SettingsViewModel : ViewModelBase
         {
             var cfg = MainViewModel.AppConfig;
             var owner = UiHost.MainWindow;
-            if (cfg == null || owner == null)
+            if (cfg == null)
             {
                 PushStatus = "无法打开登录窗口（配置或主窗口未就绪）";
                 return;
@@ -620,7 +620,7 @@ public partial class SettingsViewModel : ViewModelBase
             "重置用户协议",
             "将清除「用户协议与免责声明」的同意记录并退出软件。\n下次启动时会要求你重新阅读并同意。\n\n确定重置并退出？",
             "重置并退出", "取消");
-        bool ok = owner != null && await OverlayDialog.ShowAsync<bool>(ask, owner);
+        bool ok = await OverlayDialog.ShowAsync<bool>(ask, owner);
         if (!ok)
         {
             PushStatus = "已取消重置";
@@ -675,7 +675,7 @@ public partial class SettingsViewModel : ViewModelBase
             "  · 所有个性化设置\n\n" +
             "重置后软件将退出，重新启动后回到初始状态。\n\n确定要继续吗？",
             "继续", "取消");
-        bool go1 = owner != null && await OverlayDialog.ShowAsync<bool>(ask1, owner);
+        bool go1 = await OverlayDialog.ShowAsync<bool>(ask1, owner);
         if (!go1) { PushStatus = "已取消重置"; return; }
 
         // ---- 第二次确认：最终警告 ----
@@ -683,7 +683,7 @@ public partial class SettingsViewModel : ViewModelBase
             "最终确认",
             "最后警告：此操作不可撤销！\n\n所有账号数据、签到记录、设置将被永久删除。\n\n确认执行重置？",
             "确认重置", "取消");
-        bool go2 = owner != null && await OverlayDialog.ShowAsync<bool>(ask2, owner);
+        bool go2 = await OverlayDialog.ShowAsync<bool>(ask2, owner);
         if (!go2) { PushStatus = "已取消重置"; return; }
 
         // ---- 执行清理 ----
@@ -804,7 +804,7 @@ public partial class SettingsViewModel : ViewModelBase
             var ask = new PromptWindow("发现新版本",
                 $"发现新版本 {rel.Tag}\n（当前 {AppVersion}，约 {Math.Max(1, (long)(rel.Size / 1048576.0))} MB）\n\n是否前往 GitHub 下载页获取新版 APK？（不会自动安装，下载后手动安装即可）",
                 "前往下载", "以后再说");
-            bool gotoDownload = owner != null && await OverlayDialog.ShowAsync<bool>(ask, owner);
+            bool gotoDownload = await OverlayDialog.ShowAsync<bool>(ask, owner);
             if (!gotoDownload)
             {
                 PushStatus = "已取消更新（当前版本可继续使用）";
@@ -816,7 +816,7 @@ public partial class SettingsViewModel : ViewModelBase
             var ask = new PromptWindow("发现新版本",
                 $"发现新版本 {rel.Tag}\n（当前 {AppVersion}，约 {Math.Max(1, (long)(rel.Size / 1048576.0))} MB）\n\n是否下载并自动安装？",
                 "下载并安装", "取消");
-            bool ok = owner != null && await OverlayDialog.ShowAsync<bool>(ask, owner);
+            bool ok = await OverlayDialog.ShowAsync<bool>(ask, owner);
             if (!ok)
             {
                 PushStatus = "已取消更新";

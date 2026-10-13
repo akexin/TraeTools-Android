@@ -604,7 +604,6 @@ public partial class CheckinViewModel : ViewModelBase
         try
         {
             var owner = UiHost.MainWindow;
-            if (owner == null) return false;
             var dlg = new LoginWindow(acc);
             return await OverlayDialog.ShowAsync<bool>(dlg, owner);
         }
