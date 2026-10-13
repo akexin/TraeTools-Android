@@ -49,13 +49,16 @@ TraeTools 是对 **TRAE-Checkin** 的重构版，并集成了 **Trea-Switch** �
 git clone https://github.com/akexin/TraeTools-Android.git
 cd TraeTools-Android
 
-# Windows 桌面版
-dotnet build -c Release
+# Windows 桌面版（多目标项目须显式指定 -f）
+dotnet build -c Release -f net10.0-windows
 
 # Android 手机版（首次需安装 Android workload，约 1.5GB）
 dotnet workload install android
 dotnet publish TraeTools.csproj -c Release -f net10.0-android -o publish-android
 # 产物：publish-android/cn.akexin.traetools-Signed.apk
+
+# 非 Windows 系统（Linux/macOS）构建 Android 时需追加 -p:EnableWindowsTargeting=true
+# （多目标项目还原会一并还原 net10.0-windows，需允许下载 Windows 目标包）
 ```
 
 ## 使用指南

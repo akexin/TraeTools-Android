@@ -25,9 +25,11 @@ jobs:
           dotnet-version: "10.0.x"
 
       # 发布单文件自包含 exe：应用内更新器（UpdaterService）会下载名为 TraeTools.exe 的资产，
-      # 直接覆盖本地 exe 后重启，因此必须产出可独立运行的单文件程序
+      # 直接覆盖本地 exe 后重启，因此必须产出可独立运行的单文件程序。
+      # 注意：RuntimeIdentifier(win-x64) 定义在 csproj 的 windows 条件组内，
+      # 不能在此用 -r 传入（全局属性会污染 android TFM 的还原，报 NU1102）。
       - name: Publish (self-contained single-file win-x64)
-        run: dotnet publish TraeTools.csproj -c Release -f net10.0-windows -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish
+        run: dotnet publish TraeTools.csproj -c Release -f net10.0-windows --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish
 
       - name: Zip distribution
         shell: powershell

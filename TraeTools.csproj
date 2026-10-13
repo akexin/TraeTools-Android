@@ -26,6 +26,10 @@
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\avalonia-logo.ico</ApplicationIcon>
+    <!-- RuntimeIdentifier 必须写在这里（按 TFM 条件），不能由命令行 -r 传入：
+         命令行 -r 是全局属性，会渗入 android TFM 的还原，去找不存在的
+         Microsoft.NETCore.App.Runtime.Mono.win-x64 而报 NU1102（多目标项目 + 单目标发布） -->
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <!-- 发布瘦身：单文件 + 原生库内嵌自解压 + Brotli 压缩，减小 exe 体积（仅影响发布，不影响普通编译） -->
     <SelfContained>true</SelfContained>
     <PublishSingleFile>true</PublishSingleFile>
