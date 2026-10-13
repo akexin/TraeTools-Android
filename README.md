@@ -56,7 +56,7 @@ dotnet build -c Release
 
 # Android 手机版（首次需安装 Android workload，约 1.5GB）
 dotnet workload install android
-dotnet publish TraeTools.csproj -c Release -f net9.0-android -o publish-android
+dotnet publish TraeTools.csproj -c Release -f net10.0-android -o publish-android
 # 产物：publish-android/cn.akexin.traetools-Signed.apk
 ```
 
@@ -109,7 +109,7 @@ dotnet publish TraeTools.csproj -c Release -f net9.0-android -o publish-android
 
 - 技术栈：Avalonia 12 / .NET 9 / CommunityToolkit.Mvvm / Sodium.Core / WebView2（Windows）
 - 目录：`ViewModels/` 页面逻辑、`Services/` 网络与领域服务、`Views/` 界面、`Models/` 数据模型、`Platform/` 跨平台抽象（DPAPI/Keystore、浏览器启动等）
-- 多目标：`net9.0-windows`（WinExe 单文件）与 `net9.0-android`（APK），平台差异集中在 `Platform/` 与 `#if ANDROID` 条件编译
+- 多目标：`net10.0-windows`（WinExe 单文件）与 `net10.0-android`（APK），平台差异集中在 `Platform/` 与 `#if ANDROID` 条件编译
 - 行为默认不对外请求官方非公开接口之外的能力；用量/积分接口为逆向网页接口，字段随官方可能变化，代码均做容错解析
 
 ## 免责声明

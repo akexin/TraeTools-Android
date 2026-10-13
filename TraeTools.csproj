@@ -19,7 +19,7 @@
   </PropertyGroup>
 
   <!-- ============ Windows 专属 ============ -->
-  <PropertyGroup Condition="'$(TargetFramework)' == 'net9.0-windows'">
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-windows'">
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\avalonia-logo.ico</ApplicationIcon>
@@ -31,7 +31,7 @@
   </PropertyGroup>
 
   <!-- ============ Android 专属 ============ -->
-  <PropertyGroup Condition="'$(TargetFramework)' == 'net9.0-android'">
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-android'">
     <OutputType>Exe</OutputType>
     <SupportedOSPlatformVersion>26</SupportedOSPlatformVersion>
     <ApplicationId>cn.akexin.traetools</ApplicationId>
@@ -45,19 +45,19 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Using Remove="System.Windows.Forms" Condition="'$(TargetFramework)' == 'net9.0-windows'" />
-    <Using Remove="System.Drawing" Condition="'$(TargetFramework)' == 'net9.0-windows'" />
+    <Using Remove="System.Windows.Forms" Condition="'$(TargetFramework)' == 'net10.0-windows'" />
+    <Using Remove="System.Drawing" Condition="'$(TargetFramework)' == 'net10.0-windows'" />
   </ItemGroup>
 
   <ItemGroup>
     <AvaloniaResource Include="Assets\**" />
     <AvaloniaResource Include="Styles\**" />
     <!-- Android 资源（图标/主题/启动画面），仅 Android 目标参与生成 -->
-    <AndroidResource Include="Resources\**" Condition="'$(TargetFramework)' == 'net9.0-android'" />
+    <AndroidResource Include="Resources\**" Condition="'$(TargetFramework)' == 'net10.0-android'" />
   </ItemGroup>
 
   <!-- Windows-only 源文件（WinForms + WebView2 登录宿主，Android 无对应实现） -->
-  <ItemGroup Condition="'$(TargetFramework)' == 'net9.0-android'">
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-android'">
     <Compile Remove="Services\Login\LoginHostForm.cs" />
     <Compile Remove="Services\Login\WebViewLoginHost.cs" />
   </ItemGroup>
@@ -80,15 +80,15 @@
     <PropertyGroup Condition="'$(_VJsonVer)' != ''">
       <Version>$(_VJsonVer)</Version>
       <InformationalVersion>$(_VJsonVer)</InformationalVersion>
-      <ApplicationDisplayVersion Condition="'$(TargetFramework)' == 'net9.0-android'">$(_VJsonVer)</ApplicationDisplayVersion>
+      <ApplicationDisplayVersion Condition="'$(TargetFramework)' == 'net10.0-android'">$(_VJsonVer)</ApplicationDisplayVersion>
     </PropertyGroup>
     <Message Text="Version read from version.json: $(_VJsonVer) (applied to Version/InformationalVersion)" Importance="high" />
   </Target>
 
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="12.1.2" />
-    <PackageReference Include="Avalonia.Desktop" Version="12.1.2" Condition="'$(TargetFramework)' == 'net9.0-windows'" />
-    <PackageReference Include="Avalonia.Android" Version="12.1.2" Condition="'$(TargetFramework)' == 'net9.0-android'" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.2" Condition="'$(TargetFramework)' == 'net10.0-windows'" />
+    <PackageReference Include="Avalonia.Android" Version="12.1.2" Condition="'$(TargetFramework)' == 'net10.0-android'" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.2" />
     <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.2" />
     <PackageReference Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.3">
@@ -99,8 +99,8 @@
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.*" />
     <!-- Android 端 SQLite 原生库（e_sqlite3 的 android arm/arm64/x64/x86 变体；
          Windows 端由 bundle_e_sqlite3 自带，不会重复引入。版本跟随 Microsoft.Data.Sqlite 的 SQLitePCLRaw 传递依赖 -->
-    <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3.android" Version="2.1.*" Condition="'$(TargetFramework)' == 'net9.0-android'" />
+    <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3.android" Version="2.1.*" Condition="'$(TargetFramework)' == 'net10.0-android'" />
     <PackageReference Include="Sodium.Core" Version="1.4.1" />
-    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2903.40" Condition="'$(TargetFramework)' == 'net9.0-windows'" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2903.40" Condition="'$(TargetFramework)' == 'net10.0-windows'" />
   </ItemGroup>
 </Project>
