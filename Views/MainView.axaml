@@ -23,6 +23,15 @@
             <Setter Property="HorizontalContentAlignment" Value="Center" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
             <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="RenderTransform" Value="none" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.12" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.tab-item:pressed">
+            <Setter Property="RenderTransform" Value="scale(0.92)" />
         </Style>
         <Style Selector="Button.tab-item /template/ ContentPresenter">
             <Setter Property="CornerRadius" Value="14" />

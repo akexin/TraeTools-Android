@@ -19,8 +19,10 @@
                 <StackPanel Grid.Column="0" Spacing="4">
                     <TextBlock Text="云端签到" Classes="page-title" />
                     <TextBlock Text="GitHub Actions 自动签到 · 永不掉线" Classes="page-subtitle" />
+                    <ProgressBar Classes="loading-bar" IsIndeterminate="True" IsVisible="{Binding IsBusy}" />
                 </StackPanel>
-                <Button Grid.Column="1" Classes="btn-primary" Content="{Binding ActionButtonText}" Command="{Binding OneClickDeployCommand}" />
+                <Button Grid.Column="1" Classes="btn-primary" Content="{Binding ActionButtonText}" Command="{Binding OneClickDeployCommand}"
+                        IsEnabled="{Binding !IsBusy}" />
             </Grid>
 
             <!-- ===== 授权状态区 ===== -->

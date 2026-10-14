@@ -410,6 +410,15 @@
         <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
 
+    <!-- ========== 细加载条：异步操作进行中的轻量反馈（置于页头标题下方） ========== -->
+    <Style Selector="ProgressBar.loading-bar">
+        <Setter Property="Height" Value="3" />
+        <Setter Property="MinHeight" Value="0" />
+        <Setter Property="Margin" Value="0,8,0,0" />
+        <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+        <Setter Property="Background" Value="{DynamicResource BorderBrushKey}" />
+    </Style>
+
     <!-- ========== 默认 Window 字体 ========== -->
     <Style Selector="Window">
         <Setter Property="FontFamily" Value="Inter,Microsoft YaHei UI,Segoe UI" />
