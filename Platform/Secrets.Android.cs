@@ -54,6 +54,10 @@ internal static partial class Secrets
 
     private static partial string? UnprotectCore(string enc)
     {
+        // 必须带本平台前缀：历史上出现过「未加密的明文被当作密文送来」的情况
+        // （旧版飞书 Webhook 就是明文存的），此时直接判失败让上层保留原值，
+        // 不要盲切前 7 个字符去解析。
+        if (!enc.StartsWith(AndroidPrefix, StringComparison.Ordinal)) return null;
         try
         {
             var body = enc[AndroidPrefix.Length..];
