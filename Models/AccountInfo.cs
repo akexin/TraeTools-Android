@@ -166,28 +166,6 @@ public class CalendarDay
     public string ToolTipText { get; set; } = "";
 }
 
-public class SwitchStep
-{
-    public int Index { get; set; }
-    public string Title { get; set; } = string.Empty;
-    public string Description { get; set; } = string.Empty;
-    public string Status { get; set; } = "pending";
-
-    public IBrush StatusFgBrush
-    {
-        get
-        {
-            return Status switch
-            {
-                "ok" => new SolidColorBrush(Avalonia.Media.Color.FromRgb(0x10, 0xB9, 0x81)),
-                "progress" => new SolidColorBrush(Avalonia.Media.Color.FromRgb(0x3B, 0x82, 0xF6)),
-                "warn" => new SolidColorBrush(Avalonia.Media.Color.FromRgb(0xF5, 0x9E, 0x0B)),
-                _ => new SolidColorBrush(Avalonia.Media.Color.FromRgb(0x94, 0xA3, 0xB8))
-            };
-        }
-    }
-}
-
 public class CloudStep
 {
     public int Index { get; set; }

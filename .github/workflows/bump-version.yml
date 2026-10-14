@@ -1,0 +1,122 @@
+name: Bump Version
+
+# 手动触发的版本号自增工作流。
+#
+# 设计要点：
+# 1. version.json 是**唯一版本源**（csproj 的 Version/InformationalVersion/ApplicationDisplayVersion
+#    由 ReadVersionFromJson 目标自动读取并覆盖），因此只需改 version.json；
+#    但 Android 的 ApplicationVersion（versionCode）必须**单调递增**才能覆盖安装，需一并自增。
+# 2. 使用 GITHUB_TOKEN 推送的提交**不会**触发其它工作流（GitHub 官方限制），
+#    因此这里在推送后显式派发 ci.yml 再验证一次（workflow_dispatch 不受该限制影响）。
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "目标版本号，如 2.0.0（填写后忽略自增类型）"
+        required: false
+        type: string
+      bump:
+        description: "自增类型（version 留空时生效）"
+        required: false
+        default: minor
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: bump-version
+  cancel-in-progress: false
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.calc.outputs.version }}
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Calculate and apply new version
+        id: calc
+        env:
+          TARGET_VERSION: ${{ inputs.version }}
+          BUMP_TYPE: ${{ inputs.bump }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import datetime, json, os, re
+
+          path = "version.json"
+          with open(path, encoding="utf-8") as f:
+              data = json.load(f)
+
+          old = str(data.get("version", "0.0.0")).strip()
+          target = (os.environ.get("TARGET_VERSION") or "").strip()
+
+          if not target:
+              kind = (os.environ.get("BUMP_TYPE") or "minor").strip()
+              nums = [int(x) for x in re.split(r"[.\-+]", old) if x.isdigit()]
+              while len(nums) < 3:
+                  nums.append(0)
+              major, minor, patch = nums[0], nums[1], nums[2]
+              if kind == "major":
+                  major, minor, patch = major + 1, 0, 0
+              elif kind == "patch":
+                  patch += 1
+              else:
+                  minor, patch = minor + 1, 0
+              target = f"{major}.{minor}.{patch}"
+
+          if not re.fullmatch(r"\d+\.\d+\.\d+", target):
+              raise SystemExit(f"非法版本号：{target}（应形如 1.2.3）")
+
+          data["version"] = target
+          data["buildDate"] = datetime.date.today().isoformat()
+          with open(path, "w", encoding="utf-8") as f:
+              json.dump(data, f, ensure_ascii=False, indent=2)
+              f.write("\n")
+
+          csproj_path = "TraeTools.csproj"
+          with open(csproj_path, encoding="utf-8") as f:
+              csproj = f.read()
+          m = re.search(r"<ApplicationVersion>(\d+)</ApplicationVersion>", csproj)
+          if not m:
+              raise SystemExit("TraeTools.csproj 中未找到 <ApplicationVersion>")
+          new_code = int(m.group(1)) + 1
+          csproj = csproj[: m.start(1)] + str(new_code) + csproj[m.end(1) :]
+          with open(csproj_path, "w", encoding="utf-8") as f:
+              f.write(csproj)
+
+          print(f"version.json: {old} -> {target}")
+          print(f"Android versionCode: {m.group(1)} -> {new_code}")
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as f:
+              f.write(f"version={target}\n")
+          PY
+
+      - name: Commit and push to main
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add version.json TraeTools.csproj
+          if git diff --cached --quiet; then
+            echo "无版本变化，跳过提交"
+            exit 0
+          fi
+          git commit -m "chore(release): bump version to v${{ steps.calc.outputs.version }}"
+          git push origin HEAD:main
+
+      - name: Dispatch CI to validate the bumped commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run ci.yml --ref main
