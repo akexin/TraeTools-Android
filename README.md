@@ -1,9 +1,9 @@
-# TraeTools
+# TraeTools-Android
 
 > 极简 Trae 签到助手：本地一键签到 · 云端自动托管
 > 支持 **Windows 桌面端** 与 **Android 手机端**（APK）
 
-TraeTools 是对 **TRAE-Checkin** 的重构版，用 Avalonia 重写为现代化跨平台应用（.NET 10）。
+TraeTools-android 是对 **TRAE-Tools** 的重构安卓版，用 Avalonia 重写为现代化跨平台应用（.NET 10）。
 **2.0 做了产品减法**：去除用量统计、账号切换与繁复设置，界面收敛为**单页仪表盘**——本地签到、云端托管、最近记录三块，专注、清晰、一次点完。
 
 > **2.0 极简重构（Less is More）**：原「仪表盘 / 用量统计 / 每日签到 / 账号切换 / 云端签到 / 设置」六页导航已合并为**单页 + 二级设置**；用量统计与账号切换两块能力整体下线。已登录账号、签到历史与云端部署状态**完全保留**，升级后无需重新配置。
@@ -114,6 +114,7 @@ dotnet publish TraeTools.csproj -c Release -f net10.0-android -o publish-android
 ## 致谢
 
 - [TRAE-Checkin](https://github.com/star620/TRAE-Checkin)：本项目的前身，云端签到体系（checkin.py + GitHub Actions 流程）源自该仓库
+[TRAETOOLS](https://github.com/star620/TraeTools)：本项目只是编译了安卓版本
 
 > 2.0 起已移除对 [Trea-Switch](https://github.com/star620/Trea-Switch)（账号切换 / vault 建档）能力的集成与依赖。
 
