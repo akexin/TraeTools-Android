@@ -66,6 +66,9 @@ public partial class CheckinViewModel : ViewModelBase
     /// <summary>签到记录是否为空：驱动记录区空状态展示（插画 + 提示文案）。</summary>
     public bool HasNoRecords => Records.Count == 0;
 
+    /// <summary>最近 3 条签到记录（首页日志流，按记录产生顺序取最新三条）。</summary>
+    public System.Collections.Generic.List<CheckinRecord> RecentRecords => Records.Take(3).ToList();
+
     public CheckinViewModel()
     {
         PageSubtitle = DateTime.Today.ToString("yyyy-MM-dd · dddd");
@@ -89,8 +92,12 @@ public partial class CheckinViewModel : ViewModelBase
 
         // 真实接入：日历按当月实际签到日期构建，连签天数从历史计算
         AccountHelpers.CleanupLegacyHistoryFiles();   // 顺手清理旧版每账号历史文件（幂等）
-        // 记录增删时刷新空状态标记
-        Records.CollectionChanged += (_, __) => OnPropertyChanged(nameof(HasNoRecords));
+        // 记录增删时刷新空状态标记与首页日志流
+        Records.CollectionChanged += (_, __) =>
+        {
+            OnPropertyChanged(nameof(HasNoRecords));
+            OnPropertyChanged(nameof(RecentRecords));
+        };
         RefreshTodayState();
         ReloadCalendar();
         LoadHistory();

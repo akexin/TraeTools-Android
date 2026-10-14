@@ -14,246 +14,29 @@
     </Design.DataContext>
 
     <UserControl.Styles>
-        <!-- ===== 底部标签栏（紧凑模式）：矢量图标 + 主色激活态 ===== -->
-        <Style Selector="Button.tab-item">
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Padding" Value="0,8" />
-            <Setter Property="Foreground" Value="{DynamicResource TextSubBrush}" />
-            <Setter Property="HorizontalContentAlignment" Value="Center" />
-            <Setter Property="VerticalContentAlignment" Value="Center" />
-            <Setter Property="Cursor" Value="Hand" />
-        </Style>
-        <Style Selector="Button.tab-item /template/ ContentPresenter">
-            <Setter Property="CornerRadius" Value="14" />
-        </Style>
-        <Style Selector="Button.tab-item:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="Transparent" />
-        </Style>
-        <Style Selector="Button.tab-item:pressed /template/ ContentPresenter">
-            <Setter Property="Background" Value="{DynamicResource HoverTintBrush}" />
-        </Style>
-        <Style Selector="Button.tab-item.tab-active">
-            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
-        </Style>
-        <Style Selector="Button.tab-item.tab-active:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="Transparent" />
-        </Style>
-        <!-- 选中态图标轻微放大，强化激活反馈 -->
-        <Style Selector="Button.tab-item PathIcon">
-            <Setter Property="RenderTransform" Value="none" />
-            <Setter Property="Transitions">
-                <Transitions>
-                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.15" />
-                </Transitions>
-            </Setter>
-        </Style>
-        <Style Selector="Button.tab-item.tab-active PathIcon">
-            <Setter Property="RenderTransform" Value="scale(1.12)" />
-        </Style>
-
-        <!-- ===== 紧凑模式覆盖样式（仅 IsCompact=true 时生效，作用于整个页面子树） ===== -->
-        <!-- 内容区边距收紧 -->
+        <!-- 单页模式：仅按紧凑宽度收紧内容区边距 -->
         <Style Selector="Grid.compact Border.content-host">
-            <Setter Property="Padding" Value="16,12,16,18" />
-        </Style>
-        <!-- 仪表盘：趋势图 / 账号概览 由双列改上下堆叠（UniformGrid 行列数可被样式切换，
-             Grid.ColumnDefinitions 不是 StyledProperty 不能用样式改，故双列区一律用 UniformGrid） -->
-        <Style Selector="Grid.compact UniformGrid.dash-lower">
-            <Setter Property="Rows" Value="2" />
-            <Setter Property="Columns" Value="1" />
-        </Style>
-        <Style Selector="Grid.compact Border.chart-card">
-            <Setter Property="Margin" Value="0" />
-        </Style>
-        <Style Selector="Grid.compact Border.overview-card">
-            <Setter Property="Margin" Value="0,16,0,0" />
-        </Style>
-        <!-- 签到 / 设置 / 用量页：双列卡片上下堆叠 -->
-        <Style Selector="Grid.compact UniformGrid.stack2">
-            <Setter Property="Rows" Value="2" />
-            <Setter Property="Columns" Value="1" />
-        </Style>
-        <Style Selector="Grid.compact Border.stack-first">
-            <Setter Property="Margin" Value="0" />
-        </Style>
-        <Style Selector="Grid.compact Border.stack-second">
-            <Setter Property="Margin" Value="0,16,0,0" />
+            <Setter Property="Padding" Value="16,10,16,16" />
         </Style>
     </UserControl.Styles>
 
-    <!-- compact 类由代码按实际宽度切换，控制上方所有 Grid.compact 样式 -->
+    <!-- compact 类由代码按实际宽度切换，控制上方紧凑样式 -->
     <Grid x:Name="RootGrid" Classes.compact="{Binding IsCompact}">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="Auto" />
-            <ColumnDefinition Width="*" />
-        </Grid.ColumnDefinitions>
 
-        <!-- ============ Sidebar（桌面 / 宽屏） ============ -->
-        <Border Grid.Row="0" Grid.Column="0" Grid.RowSpan="3"
-                Background="{StaticResource SidebarBgBrush}"
-                IsVisible="{Binding !IsCompact}">
-            <Grid RowDefinitions="Auto,*,Auto">
-                <!-- Brand area -->
-                <StackPanel Grid.Row="0" Margin="20,26,20,18">
-                    <TextBlock Text="TraeTools" Foreground="White" FontSize="22" FontWeight="Bold" />
-                    <TextBlock Text="签到 · 账号切换 · 用量统计" Foreground="#94A3B8" FontSize="12" Margin="0,4,0,0" />
-                </StackPanel>
-
-                <!-- Nav items -->
-                <StackPanel Grid.Row="1" Margin="12,8" Spacing="4">
-                    <Button Classes="nav-item" Classes.nav-item-active="{Binding IsDashboardActive}"
-                            Command="{Binding NavigateCommand}" CommandParameter="dashboard">
-                        <StackPanel Orientation="Horizontal">
-                            <PathIcon Width="18" Height="18" Margin="0,0,10,0" VerticalAlignment="Center"
-                                      Data="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z" />
-                            <TextBlock Text="仪表盘" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Button>
-                    <Button Classes="nav-item" Classes.nav-item-active="{Binding IsUsageActive}"
-                            Command="{Binding NavigateCommand}" CommandParameter="usage">
-                        <StackPanel Orientation="Horizontal">
-                            <PathIcon Width="18" Height="18" Margin="0,0,10,0" VerticalAlignment="Center"
-                                      Data="M5 20v-8h3v8zM10.5 20V5h3v15zM16 20v-5h3v5z" />
-                            <TextBlock Text="用量统计" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Button>
-                    <Button Classes="nav-item" Classes.nav-item-active="{Binding IsCheckinActive}"
-                            Command="{Binding NavigateCommand}" CommandParameter="checkin">
-                        <StackPanel Orientation="Horizontal">
-                            <PathIcon Width="18" Height="18" Margin="0,0,10,0" VerticalAlignment="Center"
-                                      Data="M12 2.5a9.5 9.5 0 1 0 0 19 9.5 9.5 0 0 0 0-19z M12 4.5a7.5 7.5 0 1 1 0 15 7.5 7.5 0 0 1 0-15z M10.7 13.6 8.4 11.3 7 12.7l3.7 3.7 6.3-6.3-1.4-1.4z" />
-                            <TextBlock Text="每日签到" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Button>
-                    <!-- 账号切换：仅 Windows 桌面端可用（Android 无本地 Trae 客户端可操作） -->
-                    <Button Classes="nav-item" Classes.nav-item-active="{Binding IsSwitchActive}"
-                            IsVisible="{Binding IsSwitchSupported}"
-                            Command="{Binding NavigateCommand}" CommandParameter="switch">
-                        <StackPanel Orientation="Horizontal">
-                            <PathIcon Width="18" Height="18" Margin="0,0,10,0" VerticalAlignment="Center"
-                                      Data="M6.99 11 3 15l3.99 4v-3H14v-2H6.99v-3zM21 9l-3.99-4v3H10v2h7.01v3L21 17v-4z" />
-                            <TextBlock Text="账号切换" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Button>
-                    <Button Classes="nav-item" Classes.nav-item-active="{Binding IsCloudActive}"
-                            Command="{Binding NavigateCommand}" CommandParameter="cloud">
-                        <StackPanel Orientation="Horizontal">
-                            <PathIcon Width="18" Height="18" Margin="0,0,10,0" VerticalAlignment="Center"
-                                      Data="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z" />
-                            <TextBlock Text="云端签到" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Button>
-                    <Button Classes="nav-item" Classes.nav-item-active="{Binding IsSettingsActive}"
-                            Command="{Binding NavigateCommand}" CommandParameter="settings">
-                        <StackPanel Orientation="Horizontal">
-                            <PathIcon Width="18" Height="18" Margin="0,0,10,0" VerticalAlignment="Center"
-                                      Data="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.49.49 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />
-                            <TextBlock Text="设置" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Button>
-                </StackPanel>
-
-                <!-- Version footer：动态展示版本，与"关于/更新检查"同源，避免写死导致错位 -->
-                <TextBlock Grid.Row="2" Text="{Binding AppVersion}"
-                           Foreground="#64748B" FontSize="11"
-                           Margin="20,12" />
-            </Grid>
-        </Border>
-
-        <!-- ============ Mobile 顶栏（紧凑模式）：浅色 + 细分隔线，与内容区一体 ============ -->
-        <Border Grid.Row="0" Grid.Column="1"
-                Background="{DynamicResource CardBgBrush}"
-                BorderBrush="{DynamicResource BorderBrushKey}" BorderThickness="0,0,0,1"
-                Padding="16,12,16,10"
-                IsVisible="{Binding IsCompact}">
-            <StackPanel Orientation="Horizontal" Spacing="10">
-                <TextBlock Text="TraeTools" Foreground="{DynamicResource TextMainBrush}" FontSize="18"
-                           FontWeight="Bold" VerticalAlignment="Center" />
-                <Border Background="{DynamicResource AccentSoftBrush}" CornerRadius="999"
-                        Padding="9,3" VerticalAlignment="Center">
-                    <TextBlock Text="签到 · 用量 · 账号" FontSize="10" Foreground="{DynamicResource AccentBrush}"
-                               VerticalAlignment="Center" />
-                </Border>
-            </StackPanel>
-        </Border>
-
-        <!-- ============ Content Area ============ -->
-        <Border Grid.Row="1" Grid.Column="1" Classes="content-host"
-                Background="{DynamicResource ContentBgBrush}" Padding="28,32">
+        <!-- ============ Content Area（单页：Home / Settings 由 CurrentPage 切换） ============ -->
+        <Border Grid.Row="0" Classes="content-host"
+                Background="{DynamicResource ContentBgBrush}" Padding="24,16,24,24" MaxWidth="720"
+                HorizontalAlignment="Stretch">
             <ContentControl Content="{Binding CurrentPage}" />
-        </Border>
-
-        <!-- ============ Mobile 底部标签栏（紧凑模式）：浅色浮起 + 矢量图标 ============ -->
-        <Border Grid.Row="2" Grid.Column="1"
-                Background="{DynamicResource CardBgBrush}"
-                BorderBrush="{DynamicResource BorderBrushKey}" BorderThickness="0,1,0,0"
-                Padding="8,4,8,10"
-                IsVisible="{Binding IsCompact}">
-            <Grid ColumnDefinitions="*,*,*,*,*,*">
-                <Button Grid.Column="0" Classes="tab-item" Classes.tab-active="{Binding IsDashboardActive}"
-                        Command="{Binding NavigateCommand}" CommandParameter="dashboard">
-                    <StackPanel Spacing="3">
-                        <PathIcon Width="22" Height="22" HorizontalAlignment="Center"
-                                  Data="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z" />
-                        <TextBlock Text="仪表盘" FontSize="11" FontWeight="Medium" TextAlignment="Center" />
-                    </StackPanel>
-                </Button>
-                <Button Grid.Column="1" Classes="tab-item" Classes.tab-active="{Binding IsUsageActive}"
-                        Command="{Binding NavigateCommand}" CommandParameter="usage">
-                    <StackPanel Spacing="3">
-                        <PathIcon Width="22" Height="22" HorizontalAlignment="Center"
-                                  Data="M5 20v-8h3v8zM10.5 20V5h3v15zM16 20v-5h3v5z" />
-                        <TextBlock Text="用量" FontSize="11" FontWeight="Medium" TextAlignment="Center" />
-                    </StackPanel>
-                </Button>
-                <Button Grid.Column="2" Classes="tab-item" Classes.tab-active="{Binding IsCheckinActive}"
-                        Command="{Binding NavigateCommand}" CommandParameter="checkin">
-                    <StackPanel Spacing="3">
-                        <PathIcon Width="22" Height="22" HorizontalAlignment="Center"
-                                  Data="M12 2.5a9.5 9.5 0 1 0 0 19 9.5 9.5 0 0 0 0-19z M12 4.5a7.5 7.5 0 1 1 0 15 7.5 7.5 0 0 1 0-15z M10.7 13.6 8.4 11.3 7 12.7l3.7 3.7 6.3-6.3-1.4-1.4z" />
-                        <TextBlock Text="签到" FontSize="11" FontWeight="Medium" TextAlignment="Center" />
-                    </StackPanel>
-                </Button>
-                <Button Grid.Column="3" Classes="tab-item" Classes.tab-active="{Binding IsSwitchActive}"
-                        IsVisible="{Binding IsSwitchSupported}"
-                        Command="{Binding NavigateCommand}" CommandParameter="switch">
-                    <StackPanel Spacing="3">
-                        <PathIcon Width="22" Height="22" HorizontalAlignment="Center"
-                                  Data="M6.99 11 3 15l3.99 4v-3H14v-2H6.99v-3zM21 9l-3.99-4v3H10v2h7.01v3L21 17v-4z" />
-                        <TextBlock Text="切换" FontSize="11" FontWeight="Medium" TextAlignment="Center" />
-                    </StackPanel>
-                </Button>
-                <Button Grid.Column="4" Classes="tab-item" Classes.tab-active="{Binding IsCloudActive}"
-                        Command="{Binding NavigateCommand}" CommandParameter="cloud">
-                    <StackPanel Spacing="3">
-                        <PathIcon Width="22" Height="22" HorizontalAlignment="Center"
-                                  Data="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z" />
-                        <TextBlock Text="云端" FontSize="11" FontWeight="Medium" TextAlignment="Center" />
-                    </StackPanel>
-                </Button>
-                <Button Grid.Column="5" Classes="tab-item" Classes.tab-active="{Binding IsSettingsActive}"
-                        Command="{Binding NavigateCommand}" CommandParameter="settings">
-                    <StackPanel Spacing="3">
-                        <PathIcon Width="22" Height="22" HorizontalAlignment="Center"
-                                  Data="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.49.49 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />
-                        <TextBlock Text="设置" FontSize="11" FontWeight="Medium" TextAlignment="Center" />
-                    </StackPanel>
-                </Button>
-            </Grid>
         </Border>
 
         <!-- ============ Overlay 对话框宿主（必须跨满整个 Grid） ============ -->
         <!-- Android 单视图平台无法创建 Window（WindowingPlatformStub.CreateWindow 直接抛
-             NotSupportedException），所有对话框都以 UserControl 形式借用此覆盖层呈现；桌面端不使用。
-             ⚠️ 必须显式 RowSpan/ColumnSpan，否则覆盖层只占一个单元格，对话框会被挤到侧栏位置 -->
-        <Panel x:Name="OverlayRoot" Grid.Row="0" Grid.Column="0"
-               Grid.RowSpan="3" Grid.ColumnSpan="2"
+             NotSupportedException），所有对话框都以 UserControl 形式借用此覆盖层呈现；桌面端不使用。 -->
+        <Panel x:Name="OverlayRoot" Grid.Row="0"
                IsVisible="False" ZIndex="999">
             <Border Background="#88000000" />
             <Border HorizontalAlignment="Stretch" VerticalAlignment="Center"

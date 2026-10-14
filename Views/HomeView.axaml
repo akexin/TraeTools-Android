@@ -1,0 +1,278 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:TraeTools.ViewModels"
+             xmlns:models="using:TraeTools.Models"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="420" d:DesignHeight="900"
+             x:Class="TraeTools.Views.HomeView"
+             x:DataType="vm:HomeViewModel">
+
+    <Design.DataContext>
+        <vm:HomeViewModel />
+    </Design.DataContext>
+
+    <UserControl.Styles>
+        <!-- ===== 状态徽章：胶囊 + 状态点（运行中呼吸） ===== -->
+        <Style Selector="Border.cloud-badge">
+            <Setter Property="CornerRadius" Value="999" />
+            <Setter Property="Padding" Value="10,4" />
+            <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+        </Style>
+        <Style Selector="Border.cloud-badge.badge-muted">
+            <Setter Property="Background" Value="{DynamicResource RowBgBrush}" />
+        </Style>
+        <Style Selector="Border.cloud-badge.badge-running">
+            <Setter Property="Background" Value="{DynamicResource SuccessSoftBrush}" />
+        </Style>
+        <Style Selector="Border.cloud-badge.badge-error">
+            <Setter Property="Background" Value="{DynamicResource DangerSoftBrush}" />
+        </Style>
+        <Style Selector="Ellipse.badge-dot">
+            <Setter Property="Width" Value="7" />
+            <Setter Property="Height" Value="7" />
+            <Setter Property="Fill" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Border.badge-muted Ellipse.badge-dot">
+            <Setter Property="Fill" Value="{DynamicResource TextSubBrush}" />
+        </Style>
+        <Style Selector="Border.badge-running Ellipse.badge-dot">
+            <Setter Property="Fill" Value="{DynamicResource SuccessBrush}" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Fill" Duration="0:0:0.2" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Border.badge-error Ellipse.badge-dot">
+            <Setter Property="Fill" Value="{DynamicResource DangerBrush}" />
+        </Style>
+        <!-- 运行中呼吸动画 -->
+        <Style Selector="Border.badge-running Ellipse.badge-dot">
+            <Style.Animations>
+                <Animation Duration="0:0:1.6" IterationCount="Infinite">
+                    <KeyFrame Cue="0%">
+                        <Setter Property="Opacity" Value="1" />
+                    </KeyFrame>
+                    <KeyFrame Cue="50%">
+                        <Setter Property="Opacity" Value="0.3" />
+                    </KeyFrame>
+                    <KeyFrame Cue="100%">
+                        <Setter Property="Opacity" Value="1" />
+                    </KeyFrame>
+                </Animation>
+            </Style.Animations>
+        </Style>
+
+        <!-- ===== 部署步骤圆点 ===== -->
+        <Style Selector="Border.step">
+            <Setter Property="Width" Value="24" />
+            <Setter Property="Height" Value="24" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="Background" Value="{DynamicResource RowBgBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrushKey}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+        <Style Selector="Border.step TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource TextSubBrush}" />
+        </Style>
+        <Style Selector="Border.step-done">
+            <Setter Property="Background" Value="{DynamicResource SuccessSoftBrush}" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+        <Style Selector="Border.step-done TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}" />
+        </Style>
+        <Style Selector="Border.step-running">
+            <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+        <Style Selector="Border.step-running TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+        </Style>
+        <Style Selector="Border.step-warn">
+            <Setter Property="Background" Value="{DynamicResource DangerSoftBrush}" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+        <Style Selector="Border.step-warn TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
+        </Style>
+
+        <!-- ===== 顶栏图标按钮（线性图标，命中区 40px） ===== -->
+        <Style Selector="Button.btn-icon">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Width" Value="40" />
+            <Setter Property="Height" Value="40" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="Button.btn-icon:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource HoverTintBrush}" />
+        </Style>
+    </UserControl.Styles>
+
+    <ScrollViewer Background="Transparent" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Spacing="16">
+
+            <!-- ===== 顶部：小标题 + 云端状态一句 + 设置入口 ===== -->
+            <Grid ColumnDefinitions="*,Auto" Margin="0,4,0,0">
+                <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="TraeTools" FontSize="17" FontWeight="SemiBold" Foreground="{DynamicResource TextMainBrush}" />
+                    <TextBlock Text="{Binding Cloud.StateText}" Classes="text-caption" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+                <Button Grid.Column="1" Classes="btn-icon" Command="{Binding OpenSettingsCommand}"
+                        ToolTip.Tip="设置">
+                    <Panel Width="20" Height="20">
+                        <!-- 线性滑杆图标（与文字字重一致的 1.5px 线条） -->
+                        <Path Stroke="{DynamicResource TextMutedBrush}" StrokeThickness="1.5" StrokeLineCap="Round" Fill="None"
+                              Data="M2.5 5.5H11 M15 5.5H17.5 M2.5 14.5H5.5 M9.5 14.5H17.5 M13 5.5m-2.2 0a2.2 2.2 0 1 0 4.4 0a2.2 2.2 0 1 0 -4.4 0 M7.5 14.5m-2.2 0a2.2 2.2 0 1 0 4.4 0a2.2 2.2 0 1 0 -4.4 0" />
+                    </Panel>
+                </Button>
+            </Grid>
+
+            <!-- ===== 模块一：本地签到（轻量快捷，主色胶囊按钮） ===== -->
+            <Border Classes="card" Padding="18,16">
+                <Grid ColumnDefinitions="*,Auto">
+                    <StackPanel Grid.Column="0" Spacing="4" VerticalAlignment="Center" Margin="0,0,12,0">
+                        <TextBlock Text="本地签到" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource TextMainBrush}" />
+                        <TextBlock Text="立即为所有已启用账号执行今日签到" Classes="text-caption" TextWrapping="Wrap" />
+                        <!-- 状态反馈行：已签=绿 / 失败=红 / 默认=灰 -->
+                        <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding Checkin.CheckedInToday}">
+                            <Ellipse Width="6" Height="6" Fill="{DynamicResource SuccessBrush}" VerticalAlignment="Center" />
+                            <TextBlock Text="今日已签到" FontSize="12" Foreground="{DynamicResource SuccessBrush}" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <TextBlock Text="{Binding Checkin.StatusMessage}" FontSize="12" Foreground="{DynamicResource DangerBrush}"
+                                   IsVisible="{Binding Checkin.HasStatusMessage}" TextWrapping="Wrap" />
+                    </StackPanel>
+                    <Button Grid.Column="1" Classes="btn-primary" CornerRadius="999" Padding="22,10"
+                            Command="{Binding Checkin.DoCheckinCommand}"
+                            IsEnabled="{Binding !Checkin.CheckedInToday}"
+                            VerticalAlignment="Center">
+                        <Panel>
+                            <StackPanel Orientation="Horizontal" Spacing="6"
+                                        IsVisible="{Binding !Checkin.DoCheckinCommand.IsRunning}">
+                                <Path Fill="White" Width="13" Height="13" Stretch="Uniform"
+                                      Data="M11 3 5 14h5l-1 7 7-11h-5z" VerticalAlignment="Center" />
+                                <TextBlock Text="{Binding Checkin.CheckinButtonText}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
+                            </StackPanel>
+                            <TextBlock Text="签到中…" FontSize="13" FontWeight="SemiBold"
+                                       IsVisible="{Binding Checkin.DoCheckinCommand.IsRunning}" />
+                        </Panel>
+                    </Button>
+                </Grid>
+            </Border>
+
+            <!-- ===== 模块二：云端托管（状态优先，重引导） ===== -->
+            <Border Classes="card" Padding="18,16">
+                <StackPanel Spacing="14">
+                    <!-- 卡头：标题 + 状态徽章 -->
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Grid.Column="0" Text="云端托管" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource TextMainBrush}" VerticalAlignment="Center" />
+                        <Border Grid.Column="1" Classes="cloud-badge" Classes.badge-muted="{Binding Cloud.BadgeNotAuthorized}"
+                                Classes.badge-running="{Binding Cloud.BadgeRunning}" Classes.badge-error="{Binding Cloud.BadgeError}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <Ellipse Classes="badge-dot" />
+                                <TextBlock Text="{Binding Cloud.BadgeText}" FontSize="11" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextMainBrush}" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <!-- 未授权：说明 + 宽大主按钮 -->
+                    <StackPanel Spacing="12" IsVisible="{Binding Cloud.BadgeNotAuthorized}">
+                        <TextBlock Text="授权 GitHub 后，云端将每天自动为您签到，永不掉线。"
+                                   FontSize="13" Foreground="{DynamicResource TextMutedBrush}" TextWrapping="Wrap" />
+                        <Button Classes="btn-primary" Content="一键授权并部署" HorizontalAlignment="Stretch"
+                                Command="{Binding Cloud.OneClickDeployCommand}" MinHeight="42" />
+                        <Button Classes="btn-ghost" Content="使用 PAT 粘贴授权" HorizontalAlignment="Left"
+                                Command="{Binding Cloud.UsePatCommand}" />
+                    </StackPanel>
+
+                    <!-- 已授权：步骤时间轴 + 运行信息 -->
+                    <StackPanel Spacing="12" IsVisible="{Binding !Cloud.BadgeNotAuthorized}">
+                        <ItemsControl ItemsSource="{Binding Cloud.Steps}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="models:CloudStep">
+                                    <Grid ColumnDefinitions="30,*" Margin="0,4">
+                                        <Border Grid.Column="0" Classes="step"
+                                                Classes.step-done="{Binding IsDone}"
+                                                Classes.step-running="{Binding IsRunning}"
+                                                Classes.step-warn="{Binding IsWarn}"
+                                                VerticalAlignment="Top" HorizontalAlignment="Left">
+                                            <TextBlock Text="{Binding Index}" FontSize="12" FontWeight="Bold"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <StackPanel Grid.Column="1" Spacing="1" Margin="10,0,0,0" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Title}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextMainBrush}" />
+                                            <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{Binding StatusFgBrush}" />
+                                        </StackPanel>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <!-- 上次运行（等宽字体，工具严谨感） -->
+                        <Grid ColumnDefinitions="76,*">
+                            <TextBlock Grid.Column="0" Text="上次运行" Classes="text-caption" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="1" Text="{Binding Cloud.LastRun}" FontSize="12" FontFamily="Consolas"
+                                       Foreground="{DynamicResource TextMainBrush}" VerticalAlignment="Center"
+                                       TextTrimming="CharacterEllipsis" />
+                        </Grid>
+
+                        <!-- 部署中细进度条 -->
+                        <ProgressBar IsIndeterminate="True" Height="3" CornerRadius="2" MinHeight="3"
+                                     IsVisible="{Binding Cloud.IsBusy}" />
+
+                        <!-- 主按钮（重新部署 / 授权） -->
+                        <Button Classes="btn-primary" Content="{Binding Cloud.ActionButtonText}" HorizontalAlignment="Stretch"
+                                Command="{Binding Cloud.OneClickDeployCommand}" IsEnabled="{Binding !Cloud.IsBusy}" />
+
+                        <!-- 次级操作：灰色文字按钮 -->
+                        <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right">
+                            <Button Classes="btn-ghost" Content="打开 Actions" Command="{Binding Cloud.OpenActionsCommand}" />
+                            <Button Classes="btn-ghost" Content="解除授权" Command="{Binding Cloud.UnauthorizeCommand}" />
+                        </StackPanel>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- ===== 模块三：签到日志（最近 3 次，无边框轻列表） ===== -->
+            <Border Classes="card" Padding="18,16">
+                <StackPanel Spacing="8">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Grid.Column="0" Text="签到日志" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource TextMainBrush}" />
+                        <TextBlock Grid.Column="1" Text="最近 3 次" Classes="text-caption" VerticalAlignment="Center" />
+                    </Grid>
+                    <TextBlock Text="暂无签到记录，点击上方按钮开始" Classes="text-caption"
+                               IsVisible="{Binding Checkin.HasNoRecords}" HorizontalAlignment="Center" Margin="0,6" />
+                    <ItemsControl ItemsSource="{Binding Checkin.RecentRecords}" x:CompileBindings="False"
+                                  IsVisible="{Binding !Checkin.HasNoRecords}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,6">
+                                    <Ellipse Grid.Column="0" Width="6" Height="6" Fill="{DynamicResource SuccessBrush}"
+                                             VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="1" Text="{Binding Date}" FontSize="12" FontFamily="Consolas"
+                                               Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center" Margin="10,0,0,0" />
+                                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Account}" FontSize="12" Foreground="{DynamicResource TextSubBrush}"
+                                                   MaxWidth="120" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{Binding Result}" FontSize="12" FontWeight="Bold"
+                                                   Foreground="{Binding ResultBrush}" />
+                                    </StackPanel>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <!-- 底部版本信息（弱化） -->
+            <TextBlock Text="{Binding AppVersion}" Classes="text-caption" HorizontalAlignment="Center" Margin="0,2,0,4" />
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

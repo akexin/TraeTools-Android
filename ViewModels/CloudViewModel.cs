@@ -12,6 +12,16 @@ using TraeTools.Views;
 
 namespace TraeTools.ViewModels;
 
+/// <summary>云端托管状态（驱动首页状态徽章：灰点/绿点呼吸/红点）。</summary>
+public enum CloudBadgeState
+{
+    NotAuthorized,
+    Authorized,
+    Deploying,
+    Running,
+    Error
+}
+
 /// <summary>
 /// 云端签到：把签到脚本一键部署到用户自己的 GitHub 仓库（TraeCheckin「云端部署」完整流程）。
 /// 设备码授权（OAuth Device Flow）→ fork 源仓库 → 写入 Actions Secret → 启用并触发 workflow。
@@ -57,6 +67,33 @@ public partial class CloudViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isBusy;
 
+    /// <summary>首页状态徽章状态与文案（NotAuthorized=灰 / Running=绿呼吸 / Error=红 / 其余=蓝）。</summary>
+    [ObservableProperty]
+    private CloudBadgeState _badge = CloudBadgeState.NotAuthorized;
+
+    [ObservableProperty]
+    private string _badgeText = "未授权";
+
+    // 徽章便捷布尔位：供视图 Classes 切换配色（灰/蓝/绿呼吸/红）
+    public bool BadgeRunning => Badge == CloudBadgeState.Running;
+    public bool BadgeError => Badge == CloudBadgeState.Error;
+    public bool BadgeNotAuthorized => Badge == CloudBadgeState.NotAuthorized;
+    public bool BadgeInfo => !BadgeRunning && !BadgeError && !BadgeNotAuthorized;
+
+    partial void OnBadgeChanged(CloudBadgeState value)
+    {
+        OnPropertyChanged(nameof(BadgeRunning));
+        OnPropertyChanged(nameof(BadgeError));
+        OnPropertyChanged(nameof(BadgeNotAuthorized));
+        OnPropertyChanged(nameof(BadgeInfo));
+    }
+
+    private void SetBadge(CloudBadgeState state, string text)
+    {
+        Badge = state;
+        BadgeText = text;
+    }
+
     /// <summary>待轮询的设备码（用于「重新打开授权网页」）。</summary>
     private GitHubDeviceCode? _pendingCode;
 
@@ -90,11 +127,14 @@ public partial class CloudViewModel : ViewModelBase
         {
             StateText = (cfg?.GitHubLogin is { Length: > 0 } login ? "已授权：" + login : "已授权");
             ActionButtonText = isDeployFlow ? "检测部署状态…" : "一键部署到云端";
+            SetBadge(isDeployFlow ? CloudBadgeState.Deploying : CloudBadgeState.Authorized,
+                     isDeployFlow ? "检测中" : "已授权");
         }
         else
         {
             StateText = "尚未授权 GitHub";
             ActionButtonText = "授权 GitHub";
+            SetBadge(CloudBadgeState.NotAuthorized, "未授权");
         }
     }
 
@@ -105,6 +145,7 @@ public partial class CloudViewModel : ViewModelBase
         if (cfg == null || string.IsNullOrEmpty(cfg.GitHubToken)) return;
         string token = cfg.GitHubToken;
         string login = cfg.GitHubLogin ?? "";
+        SetBadge(CloudBadgeState.Deploying, "检测中");
         try
         {
             if (string.IsNullOrEmpty(login))
@@ -117,7 +158,7 @@ public partial class CloudViewModel : ViewModelBase
 
             DeploymentStatus status;
             try { status = await _ghApi.GetDeploymentStatusAsync(token, login); }
-            catch (Exception ex) { AccountHelpers.AppLog("cloud", "", $"检测部署状态异常：{ex.Message}"); return; }
+            catch (Exception ex) { AccountHelpers.AppLog("cloud", "", $"检测部署状态异常：{ex.Message}"); SetBadge(CloudBadgeState.Error, "检测失败"); return; }
 
             if (!status.IsAuthorized) { ClearCloudAuth("GitHub 授权已失效，请重新授权"); return; }
 
@@ -129,17 +170,24 @@ public partial class CloudViewModel : ViewModelBase
                     : "已部署完成（1 个账号），云端每天北京时间 8:00 自动签到";
                 ActionButtonText = "重新部署";
                 LastRun = await TryGetLastRunAsync(token, login);
+                // 最近一次运行结论为失败时徽章标红，否则显示绿色呼吸点（运行中）
+                if (LastRun.Contains("失败", StringComparison.Ordinal))
+                    SetBadge(CloudBadgeState.Error, "运行异常");
+                else
+                    SetBadge(CloudBadgeState.Running, "运行中");
             }
             else
             {
                 StateText = "已授权：" + login + "（尚未部署）";
                 ActionButtonText = "一键部署到云端";
+                SetBadge(CloudBadgeState.Authorized, "已授权");
             }
         }
         catch
         {
             StateText = "检测部署状态失败，仍可手动部署";
             ActionButtonText = "一键部署到云端";
+            SetBadge(CloudBadgeState.Error, "检测失败");
         }
     }
 
@@ -180,6 +228,7 @@ public partial class CloudViewModel : ViewModelBase
     private async Task OneClickDeploy()
     {
         if (IsBusy) return;
+        SetBadge(CloudBadgeState.Deploying, "部署中");
         try
         {
             var cfg = MainViewModel.AppConfig;
@@ -487,10 +536,12 @@ public partial class CloudViewModel : ViewModelBase
                 AppendLog($"部署成功！{enabled.Count} 个账号已就绪，GitHub 将每天北京时间 8:00 自动签到。");
                 StateText = "已部署完成（" + enabled.Count + " 个账号），云端每天自动签到";
                 ActionButtonText = "重新部署";
+                SetBadge(CloudBadgeState.Running, "运行中");
             }
             else if (string.IsNullOrEmpty(conclusion))
             {
                 AppendLog("已触发，但未在超时时间内拿到结果，请点击「打开 Actions」查看运行状态。");
+                SetBadge(CloudBadgeState.Running, "运行中");
             }
             else
             {
@@ -499,6 +550,7 @@ public partial class CloudViewModel : ViewModelBase
                     ? "运行结论：failure。常见原因：① Trae 风控拦截——日志出现「当前参与用户太多/参与用户太多」时，"
                       + "建议错开 08:00 高峰、减少云端账号数；② GitHub Actions 环境异常。请到 Actions 日志确认后再判断。"
                     : $"运行结论：{conclusion}，请到 GitHub Actions 页面查看日志。");
+                SetBadge(CloudBadgeState.Error, "运行异常");
             }
             await RefreshDeploymentStateAsync();
         }
@@ -508,6 +560,7 @@ public partial class CloudViewModel : ViewModelBase
             Steps[1].Status = Steps[1].Status == "progress" ? "warn" : Steps[1].Status;
             Steps[2].Status = Steps[2].Status == "progress" ? "warn" : Steps[2].Status;
             AppendLog("部署异常：" + ex.Message);
+            SetBadge(CloudBadgeState.Error, "部署异常");
         }
         finally
         {
@@ -518,9 +571,11 @@ public partial class CloudViewModel : ViewModelBase
     private void HandleDeployFailure()
     {
         var err = _ghApi.LastError ?? "";
+        bool clearedAuth = false;
         if (err.Contains("授权已失效", StringComparison.Ordinal))
         {
             ClearCloudAuth(err);
+            clearedAuth = true;
         }
         else if (err.StartsWith("fork ", StringComparison.Ordinal))
         {
@@ -542,6 +597,7 @@ public partial class CloudViewModel : ViewModelBase
             AppendLog(string.IsNullOrEmpty(err) ? "部署失败，请重试" : err);
         }
         RefreshCloudState(isDeployFlow: false);
+        if (!clearedAuth) SetBadge(CloudBadgeState.Error, "部署失败");
     }
 
     /// <summary>
@@ -606,6 +662,13 @@ public partial class CloudViewModel : ViewModelBase
     private void UpdateCredential()
     {
         AppendLog("更新凭证：请在本程序重新登录 Trae 后，再执行一次「一键部署」刷新云端 Secret（TRAE_SESSION 约 14 天有效）");
+    }
+
+    /// <summary>解除云端授权：清除本地 GitHub Token 与 fork 关联，首页徽章回到「未授权」。</summary>
+    [RelayCommand]
+    private void Unauthorize()
+    {
+        ClearCloudAuth("已手动解除云端授权");
     }
 }
 
