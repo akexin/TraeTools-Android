@@ -129,11 +129,85 @@ jobs:
           echo "selected: $APK"
           cp "$APK" TraeTools-Android.apk
           ls -lh TraeTools-Android.apk
-          # 尽力打印签名证书指纹（验证确实已签名）
+
+      # ===== 签名校验门禁 =====
+      # 旧实现只 `apksigner verify --print-certs | head -8 || true`：既不校验退出码，
+      # 也不比对指纹，等于「打印一下就放行」。签名一旦出问题（密钥被换、方案缺失、
+      # 误传未签名包），用户侧表现为「应用未安装 / 签名验证不通过」，而 CI 全绿。
+      # 现在改为硬门禁：任一条件不满足即中断发布。
+      - name: Verify APK signature (gate)
+        run: |
+          set -euo pipefail
           BT=$(ls -d "${ANDROID_HOME:-/usr/local/lib/android/sdk}"/build-tools/* 2>/dev/null | sort -V | tail -1)
-          if [ -n "$BT" ] && [ -x "$BT/apksigner" ]; then
-            "$BT/apksigner" verify --print-certs TraeTools-Android.apk | head -8 || true
-          fi
+          [ -n "$BT" ] && [ -x "$BT/apksigner" ] || { echo "::error::apksigner not found"; exit 1; }
+          echo "== apksigner verify --verbose --print-certs =="
+          # 退出码是主判据：apksigner 对签名无效/缺方案会返回非 0
+          "$BT/apksigner" verify --verbose --print-certs TraeTools-Android.apk | tee verify.txt
+
+          # 指纹比对：基准由 rotate-keystore.yml 生成，避免两处手工同步
+          EXPECTED=$(tr -d ': \r\n' < signing/EXPECTED_CERT_SHA256.txt 2>/dev/null || true)
+          ACTUAL=$(sed -n 's/.*certificate SHA-256 digest: *//p' verify.txt | head -1 | tr -d ': \r\n')
+          echo "expected = ${EXPECTED:-<缺失>}"
+          echo "actual   = ${ACTUAL:-<未解析到>}"
+          [ -n "$EXPECTED" ] || { echo "::error::缺少 signing/EXPECTED_CERT_SHA256.txt"; exit 1; }
+          [ -n "$ACTUAL" ] || { echo "::error::未能从 apksigner 输出解析证书 SHA-256"; exit 1; }
+          [ "$EXPECTED" = "$ACTUAL" ] || { echo "::error::签名证书指纹与 EXPECTED_CERT_SHA256.txt 不一致（密钥被换或产物来源不对）"; exit 1; }
+          echo "✅ 证书指纹一致"
+
+      # 结构性校验三种签名方案是否齐全。刻意不复用 apksigner 的文本输出——
+      # 不同 build-tools 版本的行格式不同（实测本仓库 CI 输出的是 "V3.0 Signer:" 而非
+      # "Signer #1 certificate ..."），文本 grep 不可靠；直接解析 APK 二进制最稳。
+      - name: Verify signature schemes present (v1 + v2 + v3)
+        run: |
+          python3 - <<'PY'
+          import os
+          import struct
+          import sys
+          import zipfile
+
+          APK = "TraeTools-Android.apk"
+          ok = True
+
+          # --- v1：JAR 签名文件存在于 META-INF ---
+          with zipfile.ZipFile(APK) as z:
+              names = [n for n in z.namelist() if n.upper().startswith("META-INF/")]
+          blk = [n for n in names if n.upper().endswith((".RSA", ".DSA", ".EC"))]
+          sf  = [n for n in names if n.upper().endswith(".SF")]
+          mf  = [n for n in names if n.upper().endswith("MANIFEST.MF")]
+          v1 = bool(blk and sf and mf)
+          print(f"v1 (JAR)        : {'存在' if v1 else '缺失'}  block={blk} SF={sf} MF={mf}")
+          ok = ok and v1
+
+          # --- v2 / v3：APK Signing Block 中的方案 ID ---
+          total = os.path.getsize(APK)
+          with open(APK, "rb") as f:
+              f.seek(max(0, total - 65536))
+              tail = f.read()
+
+          magic_rel = tail.rfind(b"APK Sig Block 42")
+          ids = {}
+          if magic_rel < 0:
+              print("APK Signing Block: 未找到（v2/v3 必然缺失）")
+          else:
+              size_of_block = struct.unpack_from("<Q", tail, magic_rel - 8)[0]
+              pos = magic_rel - size_of_block + 8 + 8   # 跳过 size(8) 与首对的开头
+              end = magic_rel - 8                       # 尾部的 size 字段之前
+              while pos < end:
+                  ln = struct.unpack_from("<Q", tail, pos)[0]
+                  if ln < 4 or pos + 8 + ln > end:
+                      break
+                  ids[struct.unpack_from("<I", tail, pos + 8)[0]] = ln
+                  pos += 8 + ln
+
+          for sid, label in ((0x7109871A, "v2 (scheme v2)"), (0xF05368C0, "v3 (scheme v3)")):
+              hit = sid in ids
+              print(f"{label:<16}: {'存在' if hit else '缺失'}  (id=0x{sid:08X})")
+              ok = ok and hit
+
+          if not ok:
+              sys.exit("::error::签名方案不完整，拒绝发布")
+          print("✅ v1 + v2 + v3 三种签名方案齐全")
+          PY
 
       - name: Upload apk to Release
         uses: softprops/action-gh-release@v2

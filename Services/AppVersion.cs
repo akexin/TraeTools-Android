@@ -26,26 +26,21 @@ public static class AppVersion
 
     private static AppVersionInfo Load()
     {
-        // 1) 优先读取 exe 内嵌的 version.json 资源（发布时与 csproj 同步，保证单文件分发版本正确）
-        try
+        // 1) 优先读取内嵌的 version.json 资源（发布时与 csproj 同步，保证单文件分发版本正确）
+        foreach (var asm in CandidateAssemblies())
         {
-            var asm = Assembly.GetEntryAssembly();
-            if (asm != null)
+            try
             {
                 var resName = Array.Find(asm.GetManifestResourceNames(), r => r.EndsWith(".version.json", StringComparison.OrdinalIgnoreCase));
-                if (resName != null)
-                {
-                    using var stream = asm.GetManifestResourceStream(resName);
-                    if (stream != null)
-                    {
-                        using var reader = new StreamReader(stream);
-                        var parsed = ParseJson(reader.ReadToEnd());
-                        if (parsed != null) return parsed;
-                    }
-                }
+                if (resName == null) continue;
+                using var stream = asm.GetManifestResourceStream(resName);
+                if (stream == null) continue;
+                using var reader = new StreamReader(stream);
+                var parsed = ParseJson(reader.ReadToEnd());
+                if (parsed != null) return parsed;
             }
+            catch { /* 该程序集读取失败则继续尝试下一个 */ }
         }
-        catch { /* 内嵌读取失败则回退下一步 */ }
 
         // 2) 读取 exe 同目录的外置 version.json（可选热修覆盖）
         try
@@ -59,11 +54,40 @@ public static class AppVersion
         }
         catch { /* JSON 解析失败回退程序集版本 */ }
 
-        // 3) 回退到程序集 InformationalVersion
-        var asmVer = Assembly.GetEntryAssembly()?
-            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
-            ?? "1.0.0";
-        return new AppVersionInfo(asmVer, "stable", "", null);
+        // 3) 回退到程序集 InformationalVersion（编译时由 csproj 从 version.json 同步，最后兜底）
+        foreach (var asm in CandidateAssemblies())
+        {
+            try
+            {
+                var asmVer = asm.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+                if (!string.IsNullOrWhiteSpace(asmVer))
+                {
+                    // SourceLink/CI 会在 InformationalVersion 后追加 "+<commit>"，展示前截掉
+                    var plus = asmVer.IndexOf('+');
+                    return new AppVersionInfo(plus >= 0 ? asmVer[..plus] : asmVer, "stable", "", null);
+                }
+            }
+            catch { /* 继续尝试下一个程序集 */ }
+        }
+
+        return new AppVersionInfo("1.0.0", "stable", "", null);
+    }
+
+    /// <summary>
+    /// 可供读取版本的程序集（按可靠性排序）。
+    ///
+    /// ⚠️ 不能用 Assembly.GetEntryAssembly() 作为唯一来源：**.NET for Android 上它返回 null**，
+    /// 会使内嵌资源与 InformationalVersion 两条路径全部落空，最终回退到 "1.0.0" 兜底常量——
+    /// 表现为移动端「关于」页与更新检查都认为自己是 v1.0.0，而远端已是更高版本，升级判定错乱。
+    /// typeof(AppVersion).Assembly 永远是本程序集，非空且必定包含内嵌的 version.json。
+    /// </summary>
+    private static IEnumerable<Assembly> CandidateAssemblies()
+    {
+        Assembly? entry = null;
+        try { entry = Assembly.GetEntryAssembly(); } catch { /* Android 上可能抛异常 */ }
+
+        if (entry != null) yield return entry;
+        yield return typeof(AppVersion).Assembly;
     }
 
     /// <summary>解析 version.json 文本；version 缺失/空则返回 null 表示不可用。</summary>

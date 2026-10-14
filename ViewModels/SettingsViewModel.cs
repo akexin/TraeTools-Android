@@ -119,8 +119,10 @@ public partial class SettingsViewModel : ViewModelBase
     private AccountInfo? _selectedAccount;
 
     // 关于区块属性
-    public string OriginalRepoUrl => "https://github.com/akexin/TraeTools-Android";
-    public string ForkRepoUrl => "https://github.com/akexin/TraeTools-Android";
+    // 「源仓库」统一指向本项目自身的仓库。
+    // 历史上这里有两行——「打开原仓库」与「打开我的 Fork 仓库」——分别对应上游 fork 与被 fork 的关系，
+    // 但 2.0 起两者实际是同一个地址（本项目仓库），显示重复且用词误导，故合并为单行「项目仓库」。
+    public string RepoUrl => "https://github.com/akexin/TraeTools-Android";
     public string IssuesUrl => "https://github.com/akexin/TraeTools-Android/issues";
     public string AppVersion => TraeTools.Services.AppVersion.Display;
 
@@ -605,21 +607,11 @@ public partial class SettingsViewModel : ViewModelBase
         }
     }
     [RelayCommand]
-    private void OpenOriginalRepo()
+    private void OpenRepo()
     {
         try
         {
-            TraeTools.Platform.BrowserLauncher.Open(OriginalRepoUrl);
-        }
-        catch { /* 忽略 */ }
-    }
-
-    [RelayCommand]
-    private void OpenForkRepo()
-    {
-        try
-        {
-            TraeTools.Platform.BrowserLauncher.Open(ForkRepoUrl);
+            TraeTools.Platform.BrowserLauncher.Open(RepoUrl);
         }
         catch { /* 忽略 */ }
     }
@@ -759,14 +751,14 @@ public partial class SettingsViewModel : ViewModelBase
             if (cfg == null || gh == null)
             {
                 // 服务未初始化：直接打开仓库主页
-                TraeTools.Platform.BrowserLauncher.Open(OriginalRepoUrl);
+                TraeTools.Platform.BrowserLauncher.Open(RepoUrl);
                 return;
             }
 
             if (string.IsNullOrEmpty(cfg.GitHubToken))
             {
                 PushStatus = "尚未授权 GitHub，已打开仓库主页，请手动点赞";
-                TraeTools.Platform.BrowserLauncher.Open(OriginalRepoUrl);
+                TraeTools.Platform.BrowserLauncher.Open(RepoUrl);
                 return;
             }
 
@@ -781,7 +773,7 @@ public partial class SettingsViewModel : ViewModelBase
             {
                 // 仓库 owner 本人无需自赞，打开主页浏览
                 PushStatus = "您是该仓库的维护者，无需为自己点赞";
-                TraeTools.Platform.BrowserLauncher.Open(OriginalRepoUrl);
+                TraeTools.Platform.BrowserLauncher.Open(RepoUrl);
                 return;
             }
 

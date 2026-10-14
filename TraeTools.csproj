@@ -14,11 +14,24 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyTitle>TraeTools</AssemblyTitle>
     <Product>TraeTools</Product>
-    <!-- 以下 Version/InformationalVersion 由 ReadVersionFromJson 目标在生成 AssemblyInfo 前从 version.json 自动读取并覆盖。
-         发版时只需修改 version.json，csproj 无需手工同步。 -->
-    <Version>1.0.0</Version>
-    <InformationalVersion>1.0.0</InformationalVersion>
     <NoWarn>CA1416;MSB3277;XA0121;CS0436</NoWarn>
+  </PropertyGroup>
+
+  <!-- ============ 版本号单一真源 = version.json ============
+       必须在「求值期」（普通 PropertyGroup，非 Target 内）读取：
+       Target 内的赋值只对求值之后运行的 Target 可见，而 .NET for Android 生成
+       AndroidManifest（versionName）发生在很靠前的阶段，用 Target 赋值会导致
+       清单里仍是 csproj 的静态兜底值，与 version.json 脱节。
+       下面的兜底值仅在 version.json 缺失/异常时生效，正常发版不会用到。 -->
+  <PropertyGroup>
+    <_VJsonRaw Condition="Exists('$(MSBuildProjectDirectory)\version.json')">$([System.IO.File]::ReadAllText('$(MSBuildProjectDirectory)\version.json'))</_VJsonRaw>
+    <_VJsonVer>$([System.Text.RegularExpressions.Regex]::Match('$(_VJsonRaw)', '&quot;version&quot;\s*:\s*&quot;([^&quot;]+)&quot;').Groups[1].Value)</_VJsonVer>
+    <Version Condition="'$(_VJsonVer)' != ''">$(_VJsonVer)</Version>
+    <Version Condition="'$(_VJsonVer)' == ''">1.0.0</Version>
+    <InformationalVersion Condition="'$(_VJsonVer)' != ''">$(_VJsonVer)</InformationalVersion>
+    <InformationalVersion Condition="'$(_VJsonVer)' == ''">1.0.0</InformationalVersion>
+    <!-- 发版时只需改 version.json；此处仅作提示，便于在 CI 日志里确认版本源已生效 -->
+    <_VersionSourceMessage>Version = $(_VJsonVer)</_VersionSourceMessage>
   </PropertyGroup>
 
   <!-- ============ Windows 专属 ============ -->
@@ -42,8 +55,12 @@
     <OutputType>Exe</OutputType>
     <SupportedOSPlatformVersion>26</SupportedOSPlatformVersion>
     <ApplicationId>cn.akexin.traetools</ApplicationId>
-    <ApplicationDisplayVersion>1.4.4</ApplicationDisplayVersion>
-    <ApplicationVersion>15</ApplicationVersion>
+    <!-- android:versionName —— 必须与 version.json 同源，否则「设置-应用信息」与 App 内「关于」会互相矛盾。
+         取自上面的求值期变量 _VJsonVer；缺失时才用兜底值。 -->
+    <ApplicationDisplayVersion Condition="'$(_VJsonVer)' != ''">$(_VJsonVer)</ApplicationDisplayVersion>
+    <ApplicationDisplayVersion Condition="'$(_VJsonVer)' == ''">1.0.0</ApplicationDisplayVersion>
+    <!-- android:versionCode —— 必须严格单调递增，否则无法覆盖安装。由 bump-version 工作流自增。 -->
+    <ApplicationVersion>16</ApplicationVersion>
     <AndroidPackageFormat>apk</AndroidPackageFormat>
     <AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
     <!-- 关闭 AOT 与链接器：.NET for Android 在 Release 下默认对程序集做 LLVM AOT，
@@ -87,18 +104,11 @@
     </None>
   </ItemGroup>
 
-  <!-- 从 version.json 自动同步 Version/InformationalVersion（生成 AssemblyInfo 前执行） -->
-  <Target Name="ReadVersionFromJson" BeforeTargets="GenerateAssemblyInfo;GenerateAssemblyInfoInternal">
-    <PropertyGroup>
-      <_VJsonContent>$([System.IO.File]::ReadAllText('$(MSBuildProjectDirectory)\version.json'))</_VJsonContent>
-      <_VJsonVer>$([System.Text.RegularExpressions.Regex]::Match('$(_VJsonContent)', '&quot;version&quot;\s*:\s*&quot;([^&quot;]+)&quot;').Groups[1].Value)</_VJsonVer>
-    </PropertyGroup>
-    <PropertyGroup Condition="'$(_VJsonVer)' != ''">
-      <Version>$(_VJsonVer)</Version>
-      <InformationalVersion>$(_VJsonVer)</InformationalVersion>
-      <ApplicationDisplayVersion Condition="'$(TargetFramework)' == 'net10.0-android'">$(_VJsonVer)</ApplicationDisplayVersion>
-    </PropertyGroup>
-    <Message Text="Version read from version.json: $(_VJsonVer) (applied to Version/InformationalVersion)" Importance="high" />
+  <!-- 版本号同步已在文件顶部「版本号单一真源」PropertyGroup 中于求值期完成，
+       此处不再需要 BeforeTargets 目标：Target 内的赋值对 .NET for Android 的
+       AndroidManifest 生成阶段不可见，曾导致 APK 的 versionName 与 version.json 脱节。 -->
+  <Target Name="ReportVersionSource" BeforeTargets="BeforeBuild">
+    <Message Text="Version read from version.json: $(_VJsonVer) (applied at evaluation time to Version/InformationalVersion/ApplicationDisplayVersion)" Importance="high" />
   </Target>
 
   <ItemGroup>

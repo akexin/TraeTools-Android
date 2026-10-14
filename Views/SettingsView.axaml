@@ -270,31 +270,17 @@
                     <Border Classes="card">
                         <StackPanel Spacing="4">
 
-                            <!-- 打开原仓库 -->
+                            <!-- 项目仓库（2.0.1 起合并了原先重复的「原仓库 / 我的 Fork 仓库」两行：
+                                 两者此前指向同一地址，显示重复且用词误导） -->
                             <Grid ColumnDefinitions="40,*,Auto" Margin="0,6">
                                 <Border Grid.Column="0" Width="34" Height="34" CornerRadius="10" Background="{DynamicResource AccentSoftBrush}" VerticalAlignment="Center">
                                     <TextBlock Text="📦" FontSize="15" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                 </Border>
                                 <StackPanel Grid.Column="1" Spacing="2" Margin="10,0" VerticalAlignment="Center">
-                                    <TextBlock Text="打开原仓库" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextMainBrush}" />
-                                    <TextBlock Text="{Binding OriginalRepoUrl}" Classes="text-caption" FontFamily="Consolas" />
+                                    <TextBlock Text="项目仓库" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextMainBrush}" />
+                                    <TextBlock Text="{Binding RepoUrl}" Classes="text-caption" FontFamily="Consolas" />
                                 </StackPanel>
-                                <Button Grid.Column="2" Classes="btn-ghost" Content="打开 →" Command="{Binding OpenOriginalRepoCommand}"
-                                        Foreground="{DynamicResource AccentBrush}" Padding="12,6" />
-                            </Grid>
-
-                            <Border Classes="row-sep" Margin="0,2" />
-
-                            <!-- 打开我的 Fork 仓库 -->
-                            <Grid ColumnDefinitions="40,*,Auto" Margin="0,6">
-                                <Border Grid.Column="0" Width="34" Height="34" CornerRadius="10" Background="{DynamicResource SuccessSoftBrush}" VerticalAlignment="Center">
-                                    <TextBlock Text="🍴" FontSize="15" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                </Border>
-                                <StackPanel Grid.Column="1" Spacing="2" Margin="10,0" VerticalAlignment="Center">
-                                    <TextBlock Text="打开我的 Fork 仓库" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextMainBrush}" />
-                                    <TextBlock Text="{Binding ForkRepoUrl}" Classes="text-caption" FontFamily="Consolas" />
-                                </StackPanel>
-                                <Button Grid.Column="2" Classes="btn-ghost" Content="打开 →" Command="{Binding OpenForkRepoCommand}"
+                                <Button Grid.Column="2" Classes="btn-ghost" Content="打开 →" Command="{Binding OpenRepoCommand}"
                                         Foreground="{DynamicResource AccentBrush}" Padding="12,6" />
                             </Grid>
 
