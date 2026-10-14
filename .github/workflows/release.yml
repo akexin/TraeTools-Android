@@ -104,30 +104,59 @@ jobs:
       - name: Install Android workload
         run: dotnet workload install android
 
-      # Android APK：使用仓库内置签名密钥（signing/traetools.keystore）签名。
-      # 不用 SDK 默认的临时 debug keystore——它每次运行都重新生成，会导致各版本签名
-      # 不一致、无法覆盖安装。AndroidKeyStore=true 时产出的签名产物名为 *-Signed.apk。
+      # Android APK：产出**未签名**包，随后由下面的步骤用仓库内置密钥
+      # （signing/traetools.keystore）显式签名。
+      #
+      # 为什么不交给 dotnet publish 的 AndroidKeyStore=true 自动签名：
+      # 实测两版行为不一致——v2.0.0 的产物含 v1(JAR) 签名，换密钥后的 v2.0.1
+      # 产物 `Verified using v1 scheme: false`，即 v1 是否产出取决于 .NET for Android
+      # 的内部启发式（与 apksigner 的默认值/minSdk 判定交互），不可控也不可预期。
+      # 显式调用 apksigner 并写死 --v1/--v2/--v3 三个开关，行为才是确定的。
+      #
       # EnableWindowsTargeting：多目标项目还原需一并还原 net10.0-windows，ubuntu 上必须显式开启
-      - name: Publish (android apk, signed)
+      - name: Publish (android apk, unsigned)
         run: |
           dotnet publish TraeTools.csproj -c Release -f net10.0-android \
             -p:EnableWindowsTargeting=true \
             -p:AndroidPackageFormat=apk \
-            -p:AndroidKeyStore=true \
-            -p:AndroidSigningKeyStore="$PWD/signing/traetools.keystore" \
-            -p:AndroidSigningKeyAlias=traetools \
-            -p:AndroidSigningKeyPass=traetools \
-            -p:AndroidSigningStorePass=traetools \
+            -p:AndroidKeyStore=false \
             -o publish-android
-
-      - name: Collect apk
-        run: |
-          echo "== publish-android 中的 APK 候选（未签名的 *.apk 不可安装，必须取 *-Signed.apk）=="
+          echo "== publish-android 产物 =="
           find publish-android -name "*.apk" -printf "%s\t%p\n" | sort -rn || true
-          APK=$(find publish-android -iname "*-Signed.apk" | head -1)
-          if [ -z "$APK" ]; then echo "::error::no signed apk produced"; exit 1; fi
-          echo "selected: $APK"
-          cp "$APK" TraeTools-Android.apk
+
+      - name: Sign APK explicitly with repo keystore (v1 + v2 + v3)
+        run: |
+          set -euo pipefail
+          SRC=$(find publish-android -name "cn.akexin.traetools.apk" | head -1)
+          [ -n "$SRC" ] || SRC=$(find publish-android -name "*.apk" ! -iname "*-Signed.apk" | head -1)
+          [ -n "$SRC" ] || { echo "::error::未找到未签名 APK"; exit 1; }
+          echo "unsigned apk: $SRC"
+          ls -lh "$SRC"
+
+          BT=$(ls -d "${ANDROID_HOME:-/usr/local/lib/android/sdk}"/build-tools/* 2>/dev/null | sort -V | tail -1)
+          ZA="$BT/zipalign"; AS="$BT/apksigner"
+          [ -x "$ZA" ] && [ -x "$AS" ] || { echo "::error::zipalign/apksigner not found"; exit 1; }
+
+          # zipalign 必须在签名之前。四参形式对齐到 4 字节并启用页对齐；
+          # -P 16 指定 .so 按 16KB 页对齐（Android 15+ 对含原生库的包有要求），
+          # 老版本 build-tools 不认识 -P 时回退到经典的 -p 4。
+          if "$ZA" -f -p -P 16 4 "$SRC" aligned.apk 2>/dev/null; then
+            echo "zipalign 模式: -f -p -P 16 4"
+          else
+            echo "zipalign 模式: -f -p 4（回退，build-tools 不支持 -P）"
+            "$ZA" -f -p 4 "$SRC" aligned.apk
+          fi
+
+          # 三方案全开：v1 兼容只认 JAR 签名的老设备/第三方安装器，v2/v3 是 Android 7/9+ 的主验签路径
+          "$AS" sign \
+            --ks signing/traetools.keystore --ks-type PKCS12 \
+            --ks-pass pass:traetools \
+            --ks-key-alias traetools \
+            --key-pass pass:traetools \
+            --v1-signing-enabled true \
+            --v2-signing-enabled true \
+            --v3-signing-enabled true \
+            --out TraeTools-Android.apk aligned.apk
           ls -lh TraeTools-Android.apk
 
       # ===== 签名校验门禁 =====
@@ -144,9 +173,11 @@ jobs:
           # 退出码是主判据：apksigner 对签名无效/缺方案会返回非 0
           "$BT/apksigner" verify --verbose --print-certs TraeTools-Android.apk | tee verify.txt
 
-          # 指纹比对：基准由 rotate-keystore.yml 生成，避免两处手工同步
-          EXPECTED=$(tr -d ': \r\n' < signing/EXPECTED_CERT_SHA256.txt 2>/dev/null || true)
-          ACTUAL=$(sed -n 's/.*certificate SHA-256 digest: *//p' verify.txt | head -1 | tr -d ': \r\n')
+          # 指纹比对：基准由 rotate-keystore.yml 生成，避免两处手工同步。
+          # 必须做大小写归一——keytool 输出大写、apksigner 输出小写，
+          # 直接字符串比较会因大小写差异误报"不一致"（实测踩过）。
+          EXPECTED=$(tr -cd '0-9A-Fa-f' < signing/EXPECTED_CERT_SHA256.txt 2>/dev/null | tr 'a-f' 'A-F')
+          ACTUAL=$(sed -n 's/.*certificate SHA-256 digest: *//p' verify.txt | head -1 | tr -cd '0-9A-Fa-f' | tr 'a-f' 'A-F')
           echo "expected = ${EXPECTED:-<缺失>}"
           echo "actual   = ${ACTUAL:-<未解析到>}"
           [ -n "$EXPECTED" ] || { echo "::error::缺少 signing/EXPECTED_CERT_SHA256.txt"; exit 1; }
