@@ -173,7 +173,7 @@
                     </StackPanel>
                 </Grid>
 
-                <!-- ===== 账号切换列表：由顶栏账号区展开（仅多账号时展开） ===== -->
+                <!-- ===== 账号切换列表：由顶栏账号区展开（含「管理账号」入口） ===== -->
                 <Border IsVisible="{Binding IsAccountSwitcherOpen}"
                         Background="{DynamicResource RowBgBrush}" CornerRadius="12" Padding="8">
                     <StackPanel Spacing="2">
@@ -197,6 +197,7 @@
                                                            TextTrimming="CharacterEllipsis" />
                                                 <TextBlock Text="{Binding Subtitle}" FontSize="10"
                                                            Foreground="{DynamicResource TextSubBrush}"
+                                                           TextTrimming="CharacterEllipsis" MaxLines="1"
                                                            IsVisible="{Binding HasSubtitle}" />
                                             </StackPanel>
                                             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6"
@@ -213,6 +214,23 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
+
+                        <!-- 列表底部始终保留「管理账号」入口：
+                             单个账号时用户也会点下三角看列表，此时唯一有价值的操作就是去添加/编辑账号 -->
+                        <Border Height="1" Background="{DynamicResource BorderBrushKey}" Margin="6,6,6,4" />
+                        <Button Classes="acct-row" Command="{Binding ManageAccountsCommand}">
+                            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                <Border Width="22" Height="22" CornerRadius="11"
+                                        Background="{DynamicResource AccentSoftBrush}" VerticalAlignment="Center">
+                                    <TextBlock Text="＋" FontSize="12" FontWeight="Bold"
+                                               Foreground="{DynamicResource AccentBrush}"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <TextBlock Text="添加账号 / 管理账号" FontSize="12"
+                                           Foreground="{DynamicResource AccentBrush}"
+                                           VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
                     </StackPanel>
                 </Border>
 

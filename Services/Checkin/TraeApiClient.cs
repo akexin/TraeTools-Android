@@ -99,8 +99,13 @@ public class TraeApiClient
         }
     }
 
-    /// <summary>查询剩余积分（汇总所有资格包的剩余额度）。</summary>
-    public async Task<double> GetRemainingCreditsAsync(string token, string deviceId)
+    /// <summary>
+    /// 查询额度汇总（/trae/api/v2/pay/user_current_entitlement_list）：
+    /// 把各个资格包的 credits_limit 汇总为总配额、usage.credits_amount 汇总为已消耗。
+    /// 返回 null 表示解析失败（此时 <see cref="LastError"/> 有原因），调用方应保留界面旧值，
+    /// 不要把它当成「配额 0」。
+    /// </summary>
+    public async Task<EntitlementSummary?> GetEntitlementAsync(string token, string deviceId)
     {
         using var req = BuildRequest(HttpMethod.Post, "/trae/api/v2/pay/user_current_entitlement_list", token, deviceId, "{}");
         try
@@ -109,48 +114,64 @@ public class TraeApiClient
             var json = await resp.Content.ReadAsStringAsync();
             using var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
-            if (root.TryGetProperty("user_entitlement_pack_list", out var packs) &&
-                packs.ValueKind == JsonValueKind.Array)
+            if (!root.TryGetProperty("user_entitlement_pack_list", out var packs) ||
+                packs.ValueKind != JsonValueKind.Array)
             {
-                // 空列表 = 接口返回了异常结构（如未登录/风控），视为解析失败返回 -1，
-                // 避免把「解析失败」误当「剩余 0 分」把界面积分清零。
-                if (packs.GetArrayLength() == 0)
-                {
-                    LastError = "积分包列表为空，可能会话失效";
-                    return -1;
-                }
-                double remaining = 0;
-                foreach (var p in packs.EnumerateArray())
-                {
-                    double limit = 0;
-                    if (p.TryGetProperty("entitlement_base_info", out var info) &&
-                        info.TryGetProperty("quota", out var quota) &&
-                        quota.TryGetProperty("credits_limit", out var cl))
-                    {
-                        if (cl.ValueKind == JsonValueKind.Number) limit = cl.GetDouble();
-                        else if (cl.ValueKind == JsonValueKind.String) double.TryParse(cl.GetString(), out limit);
-                    }
-                    double used = 0;
-                    if (p.TryGetProperty("usage", out var usage) &&
-                        usage.TryGetProperty("credits_amount", out var ua))
-                    {
-                        if (ua.ValueKind == JsonValueKind.Number) used = ua.GetDouble();
-                        else if (ua.ValueKind == JsonValueKind.String) double.TryParse(ua.GetString(), out used);
-                    }
-                    var rem = limit - used;
-                    if (rem < 0) rem = 0;
-                    remaining += rem;
-                }
-                return remaining;
+                LastError = "响应缺少 user_entitlement_pack_list 字段";
+                return null;
             }
-            LastError = "响应缺少 user_entitlement_pack_list 字段";
-            return -1;
+            // 空列表 = 接口返回了异常结构（如未登录/风控），视为解析失败，
+            // 避免把「解析失败」误当「剩余 0 分」把界面积分清零。
+            if (packs.GetArrayLength() == 0)
+            {
+                LastError = "积分包列表为空，可能会话失效";
+                return null;
+            }
+
+            double limit = 0, used = 0;
+            foreach (var p in packs.EnumerateArray())
+            {
+                if (p.TryGetProperty("entitlement_base_info", out var info) &&
+                    info.TryGetProperty("quota", out var quota) &&
+                    quota.TryGetProperty("credits_limit", out var cl))
+                {
+                    limit += ReadNumber(cl);
+                }
+                if (p.TryGetProperty("usage", out var usage) &&
+                    usage.TryGetProperty("credits_amount", out var ua))
+                {
+                    used += ReadNumber(ua);
+                }
+            }
+            LastError = null;
+            return new EntitlementSummary
+            {
+                Ok = true,
+                Limit = limit,
+                Used = used,
+                PackCount = packs.GetArrayLength(),
+            };
         }
         catch (Exception ex)
         {
             LastError = ex.Message;
-            return -1;
+            return null;
         }
+    }
+
+    /// <summary>兼容旧调用：只取剩余积分；解析失败返回 -1。</summary>
+    public async Task<double> GetRemainingCreditsAsync(string token, string deviceId)
+    {
+        var e = await GetEntitlementAsync(token, deviceId);
+        return e == null ? -1 : e.Remaining;
+    }
+
+    /// <summary>接口里的数值可能是 JSON number 也可能是字符串，统一读成 double。</summary>
+    private static double ReadNumber(JsonElement el)
+    {
+        if (el.ValueKind == JsonValueKind.Number) return el.GetDouble();
+        if (el.ValueKind == JsonValueKind.String && double.TryParse(el.GetString(), out var v)) return v;
+        return 0;
     }
 
     private async Task<T?> SendAsync<T>(HttpRequestMessage req) where T : class
@@ -254,4 +275,21 @@ public sealed class TraeUserProfile
     public string? MobileMasked { get; set; }
     public string? AvatarUrl { get; set; }
     public string? TenantId { get; set; }
+}
+
+/// <summary>
+/// 额度汇总：总配额 / 已消耗 / 剩余（各资格包求和）。
+/// 「消耗积分」即各资格包 usage.credits_amount 之和，正是界面数据面板要展示的口径。
+/// </summary>
+public sealed class EntitlementSummary
+{
+    public bool Ok { get; init; }
+    /// <summary>总配额（各包 credits_limit 之和）。</summary>
+    public double Limit { get; init; }
+    /// <summary>已消耗积分（各包 usage.credits_amount 之和）。</summary>
+    public double Used { get; init; }
+    /// <summary>资格包数量。</summary>
+    public int PackCount { get; init; }
+    /// <summary>剩余积分（下限 0）。</summary>
+    public double Remaining => Math.Max(0, Limit - Used);
 }

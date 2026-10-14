@@ -263,6 +263,17 @@ public partial class CloudViewModel : ViewModelBase
 
     private async void OpenAuthPage(GitHubDeviceCode code)
     {
+        // ⚠️ 顺序很重要：先打开浏览器，再复制授权码。
+        // 旧实现先 await 剪贴板，若剪贴板操作在 Android 上卡住/抛错，后面的打开浏览器就被跳过了
+        // —— 用户看到的现象正是「点了授权却没自动跳浏览器」。
+        bool opened = false;
+        try { opened = TraeTools.Platform.BrowserLauncher.Open(code.VerificationUri); }
+        catch (Exception ex) { AppendLog("自动打开浏览器异常：" + ex.Message); }
+
+        if (!opened)
+            AppendLog("未能自动打开浏览器，请手动访问：" + code.VerificationUri
+                      + "（失败原因已写入日志 → 全部 → browser）");
+
         // 自动复制授权码到剪贴板（与原 TraeCheckin 行为一致）
         try
         {
@@ -272,13 +283,14 @@ public partial class CloudViewModel : ViewModelBase
                 await cb.SetTextAsync(code.UserCode);
                 AppendLog("授权码 " + code.UserCode + " 已复制到剪贴板，粘贴到网页即可");
             }
+            else
+            {
+                AppendLog("剪贴板不可用，请手动记录授权码：" + code.UserCode);
+            }
         }
-        catch { /* 复制失败不阻断 */ }
-
-        try { TraeTools.Platform.BrowserLauncher.Open(code.VerificationUri); }
         catch (Exception ex)
         {
-            AppendLog("自动打开浏览器失败，请手动访问：" + code.VerificationUri + "（" + ex.Message + "）");
+            AppendLog("复制授权码失败（不影响授权）：" + ex.Message + "，授权码：" + code.UserCode);
         }
     }
 

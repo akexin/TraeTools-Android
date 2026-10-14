@@ -59,9 +59,11 @@ public partial class DeviceAuthWindow : UserControl
 
     private void OpenPage(GitHubDeviceCode code)
     {
-        
-        try { TraeTools.Platform.BrowserLauncher.Open(code.VerificationUri); }
-        catch (Exception ex) { StatusText.Text = "自动打开浏览器失败，请手动访问：" + code.VerificationUri + "（" + ex.Message + "）"; }
+        // 先尝试自动打开系统浏览器；失败时把可手动访问的地址留在状态栏，别让用户点了个寂寞
+        bool opened = TraeTools.Platform.BrowserLauncher.Open(code.VerificationUri);
+        if (!opened)
+            StatusText.Text = "未能自动打开浏览器，请手动访问：" + code.VerificationUri
+                              + "（失败原因见「日志 → 全部 → browser」）";
     }
 
     private void OnOpenPageClick(object? sender, RoutedEventArgs e)

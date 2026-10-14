@@ -19,6 +19,10 @@ internal static partial class Secrets
 
     private static partial string? UnprotectCore(string enc)
     {
+        // 跨平台密文互不通用：Windows 上的 DPAPI 不可能解开 Android Keystore 产生的密文。
+        // 明确判失败（而不是把密文当明文用），让上层走「重新登录」流程。
+        // 注意这条判断只在 Windows 实现里成立——Android 密文本身就是这个前缀。
+        if (enc.StartsWith(AndroidPrefix, StringComparison.Ordinal)) return null;
         try
         {
             var bytes = ProtectedData.Unprotect(Convert.FromBase64String(enc), null, DataProtectionScope.CurrentUser);

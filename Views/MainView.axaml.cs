@@ -42,6 +42,8 @@ public partial class MainView : UserControl
                 if (DataContext is MainViewModel vm)
                 {
                     await vm.AutoCheckinIfDue();
+                    // 保活：按各账号自己的间隔静默换新 Token（开启保活的账号才会执行）
+                    await vm.KeepAliveIfDue();
 #if !ANDROID
                     await vm.RefreshSnapshotIfNeeded();
 #endif

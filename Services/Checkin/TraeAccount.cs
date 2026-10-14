@@ -43,4 +43,62 @@ public class TraeAccount
     public string? AvatarUrl { get; set; }
     /// <summary>是否学生认证（student_verification.status==1）。</summary>
     public bool IsStudent { get; set; }
+
+    // ==================== 账号简介（用户自填，随配置持久化） ====================
+
+    /// <summary>
+    /// 用户自填的账号简介 / 备注（自由文本，如「主号 · 只用来跑代码」）。
+    /// 与 <see cref="Name"/> 的区别：Name 是短展示名（顶栏切换器用），Bio 是可写多行的说明。
+    /// </summary>
+    public string? Bio { get; set; }
+
+    // ==================== 保活 ====================
+
+    /// <summary>
+    /// 是否对该账号开启保活：按间隔用 X-Cloudide-Session 静默换新 JWT，
+    /// 避免 Token（约 8 小时）过期后掉线，同时顺带刷新资料与积分数据。
+    /// 默认关闭——保活会产生周期性网络请求，交由用户按需开启。
+    /// </summary>
+    public bool KeepAliveEnabled { get; set; }
+
+    /// <summary>保活间隔（分钟）。合法区间 5–1440，越界时由 <see cref="ClampKeepAliveMinutes"/> 收敛。</summary>
+    public int KeepAliveIntervalMinutes { get; set; } = DefaultKeepAliveMinutes;
+
+    /// <summary>最近一次保活执行时间（含失败的一次，用于展示与到期判定）。</summary>
+    public DateTime? LastKeepAliveAt { get; set; }
+
+    /// <summary>最近一次保活结果描述（成功/失败原因），直接展示在设置页。</summary>
+    public string? LastKeepAliveMessage { get; set; }
+
+    /// <summary>保活间隔的取值范围与默认值。</summary>
+    public const int MinKeepAliveMinutes = 5;
+    public const int MaxKeepAliveMinutes = 1440;
+    public const int DefaultKeepAliveMinutes = 60;
+
+    /// <summary>把任意输入收敛到合法保活间隔（分钟）。</summary>
+    public static int ClampKeepAliveMinutes(int minutes)
+        => minutes < MinKeepAliveMinutes ? MinKeepAliveMinutes
+         : minutes > MaxKeepAliveMinutes ? MaxKeepAliveMinutes
+         : minutes;
+
+    /// <summary>该账号本轮是否到了保活时间（未开启 → 恒为 false）。</summary>
+    public bool IsKeepAliveDue(DateTime now)
+    {
+        if (!KeepAliveEnabled) return false;
+        // 从未保活过：视为立即到期（开启后马上生效，不用先等满一个间隔）
+        if (LastKeepAliveAt is not { } last) return true;
+        var gap = TimeSpan.FromMinutes(ClampKeepAliveMinutes(KeepAliveIntervalMinutes));
+        return now - last >= gap;
+    }
+
+    // ==================== 积分数据面板（额度统计） ====================
+
+    /// <summary>额度总配额（user_current_entitlement_list 的 credits_limit 汇总）；-1 表示尚未获取。</summary>
+    public double QuotaLimit { get; set; } = -1;
+
+    /// <summary>已消耗积分（usage.credits_amount 汇总）；-1 表示尚未获取。</summary>
+    public double QuotaUsed { get; set; } = -1;
+
+    /// <summary>统计数据最近更新时间（界面据此标注「数据截至」）。</summary>
+    public DateTime? StatsUpdatedAt { get; set; }
 }

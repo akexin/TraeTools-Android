@@ -20,8 +20,12 @@ internal static partial class Secrets
     public static string? Unprotect(string? enc)
     {
         if (string.IsNullOrEmpty(enc)) return enc;
-        // 跨平台密文互不通用：Windows 实例读到 Android 密文时明确失败，触发重新登录
-        if (enc.StartsWith(AndroidPrefix, StringComparison.Ordinal)) return null;
+        // ⚠️ 跨平台密文互不通用（Windows 读不懂 Keystore 密文、反之亦然）这条规则
+        // **必须写在具体平台的实现里**，不能写在这层共享代码里：
+        // Android 自己的密文就是 "and-v1:" 前缀，若在此处拦截，Android 将永远解不开自己加密的数据
+        // （症状：DeviceId 退化成密文被当作设备号发出去 → 风控 9074「参与用户太多」）。
+        // 现在的分工：这里只管分发，平台差异由 UnprotectCore 各自处理
+        // （Windows 实现会拒绝 "and-v1:" 前缀，见 Secrets.Windows.cs）。
         return UnprotectCore(enc);
     }
 

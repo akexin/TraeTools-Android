@@ -63,18 +63,29 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private bool _canSwitchAccount;
 
-    /// <summary>点击顶栏账号区：展开/收起切换器（无账号时不展开）。</summary>
+    /// <summary>点击顶栏账号区：展开/收起账号列表。</summary>
     [RelayCommand]
     private void ToggleAccountSwitcher()
     {
-        if (!CanSwitchAccount)
+        // 一个账号都没有：没有可看的列表，直接去设置页添加
+        if (AppConfig is null || AppConfig.Accounts.Count == 0)
         {
-            // 只有一个账号时点击无意义，直接进设置页的账号管理更实用
             Navigate("settings");
             return;
         }
+        // ⚠️ 只有 1 个账号时也要展开列表（列表底部带「添加账号 / 管理账号」入口）。
+        // 旧实现在这里直接跳设置页，用户点「账号旁边的下三角」时感觉是「被强行带去了登录页」，
+        // 与下拉三角的语义不符。
         RefreshSwitchAccounts();
         IsAccountSwitcherOpen = !IsAccountSwitcherOpen;
+    }
+
+    /// <summary>账号切换列表底部的「管理账号」入口：收起列表并进入设置页的账号管理区。</summary>
+    [RelayCommand]
+    private void ManageAccounts()
+    {
+        IsAccountSwitcherOpen = false;
+        Navigate("settings");
     }
 
     /// <summary>把某个账号设为当前激活账号：签到引擎、仪表盘、云端状态与设置页同步刷新。</summary>
@@ -136,7 +147,10 @@ public partial class MainViewModel : ViewModelBase
                 {
                     Id = accId,
                     Display = display,
-                    Subtitle = string.IsNullOrEmpty(a.MobileMasked) ? "" : a.MobileMasked!,
+                    // 副标题优先显示用户自填的账号简介；没写简介时退回脱敏手机号
+                    Subtitle = !string.IsNullOrWhiteSpace(a.Bio)
+                        ? a.Bio!.Trim()
+                        : (string.IsNullOrEmpty(a.MobileMasked) ? "" : a.MobileMasked!),
                     Initial = display.Length > 0 ? display[0].ToString() : "?",
                     IsCurrent = a.Id == active.Id,
                     CheckedInToday = a.LastCheckinDate.HasValue && a.LastCheckinDate.Value.Date == DateTime.Today,
@@ -323,6 +337,27 @@ public partial class MainViewModel : ViewModelBase
 
     /// <summary>由 MainView 定时器定时调用：到点自动签到（TraeCheckin「每日自动签到」能力）。</summary>
     public Task<bool> AutoCheckinIfDue() => _checkin.TryAutoCheckinAsync();
+
+    /// <summary>
+    /// 由 MainView 定时器定时调用：对到期的账号执行保活（静默换新 Token + 刷新积分数据）。
+    /// 返回本次成功保活的账号数（0 表示无需保活或全部失败）。
+    /// </summary>
+    public async Task<int> KeepAliveIfDue()
+    {
+        try
+        {
+            int n = await TraeTools.Services.KeepAlive.KeepAliveService.RunDueAsync();
+            if (n > 0)
+            {
+                // 保活顺带刷新了积分，界面跟着更新
+                Home.Refresh();
+                RefreshSwitchAccounts();
+                await _settings.RefreshAccountStatesAsync();
+            }
+            return n;
+        }
+        catch { return 0; }
+    }
 
     /// <summary>
     /// 原为「客户端退出后静默刷新账号 vault 备份」，随账号切换能力一并移除；

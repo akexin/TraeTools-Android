@@ -8,6 +8,12 @@ namespace TraeTools.ViewModels;
 /// <summary>账号相关跨 VM 共享工具（DeviceId 补发 / Token 会话换新）。</summary>
 public static class AccountHelpers
 {
+    /// <summary>
+    /// 校验设备号合法性：必须是 **16 位纯数字**（Trae 风控要求；用 GUID/UUID 会触发 9074）。
+    /// </summary>
+    public static bool IsValidDeviceId(string? id)
+        => !string.IsNullOrEmpty(id) && id.Length == 16 && id.All(char.IsDigit);
+
     /// <summary>缺号则生成不与其它账号重复的 16 位数字设备号（风控要求，多账号共用会触发 9074）。</summary>
     public static void EnsureDeviceId(TraeAccount acc)
     {
@@ -15,12 +21,23 @@ public static class AccountHelpers
             MainViewModel.AppConfig?.Accounts.Where(a => a.Id != acc.Id).Select(a => a.DeviceId)
                .Where(d => !string.IsNullOrWhiteSpace(d)) ?? Array.Empty<string>(),
             StringComparer.Ordinal);
-        // 已有且不与其它账号重复 → 保持不动（幂等）；为空或与别人相同（手工填错）→ 换发独立新号
-        if (!string.IsNullOrWhiteSpace(acc.DeviceId) && !used.Contains(acc.DeviceId)) return;
+        // 已有且合法、且不与其它账号重复 → 保持不动（幂等）；否则换发独立新号。
+        // 「合法」不只是非空：历史上出现过密文被当成明文存的坏数据
+        // （Secrets.Unprotect 曾在 Android 上永远失败的旧版缺陷），
+        // 那种值会被原样发到 x-device-id 上，表现为风控 9074。这里顺带自愈。
+        if (IsValidDeviceId(acc.DeviceId) && !used.Contains(acc.DeviceId)) return;
+
+        var bad = acc.DeviceId;
         string id;
         do { id = Random.Shared.NextInt64(1_000_000_000_000_000L, 10_000_000_000_000_000L).ToString(); }
         while (used.Contains(id));
         acc.DeviceId = id;
+
+        if (!string.IsNullOrEmpty(bad) && !IsValidDeviceId(bad))
+        {
+            var name = string.IsNullOrEmpty(acc.Name) ? (acc.Id.Length > 6 ? acc.Id[..6] : acc.Id) : acc.Name!;
+            CheckinLog(name, $"设备号不合法（{bad.Length} 位、非纯数字，疑似密文残留），已自动更换为新设备号 {id}");
+        }
     }
 
     /// <summary>校验/换新 Token：失效时用 X-Cloudide-Session 静默换新并保存；返回是否持有可用 token。</summary>

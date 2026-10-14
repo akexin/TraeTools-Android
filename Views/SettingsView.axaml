@@ -1,6 +1,7 @@
 ﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:TraeTools.ViewModels"
+             xmlns:sec="using:TraeTools.Services.Security"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
@@ -23,6 +24,34 @@
             <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
             <Setter Property="BorderThickness" Value="2" />
             <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+        </Style>
+
+        <!-- ===== 账号详情：积分数据面板的小方块 ===== -->
+        <Style Selector="Border.stat-tile">
+            <Setter Property="Background" Value="{DynamicResource CardBgBrush}" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="10,8" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrushKey}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+        <Style Selector="TextBlock.stat-value">
+            <Setter Property="FontSize" Value="17" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Foreground" Value="{DynamicResource TextMainBrush}" />
+            <Setter Property="FontFamily" Value="Consolas,Menlo,monospace" />
+        </Style>
+        <Style Selector="TextBlock.stat-label">
+            <Setter Property="FontSize" Value="10" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSubBrush}" />
+        </Style>
+
+        <!-- ===== 安全检查：单条结论 ===== -->
+        <Style Selector="Border.sec-row">
+            <Setter Property="Background" Value="{DynamicResource CardBgBrush}" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="10,8" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrushKey}" />
+            <Setter Property="BorderThickness" Value="1" />
         </Style>
     </UserControl.Styles>
 
@@ -406,6 +435,11 @@
                                             </Grid>
                                             <StackPanel Grid.Column="1" Spacing="1" Margin="10,0" VerticalAlignment="Center">
                                                 <TextBlock Text="{Binding Name}" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                                <!-- 账号简介：未填写时整行隐藏 -->
+                                                <TextBlock Text="{Binding BioText}" FontSize="10"
+                                                           Foreground="{DynamicResource TextSubBrush}"
+                                                           TextTrimming="CharacterEllipsis" MaxLines="1"
+                                                           IsVisible="{Binding ShowBio}" />
                                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                                     <TextBlock Text="{Binding MobileText}" FontSize="10" Foreground="{DynamicResource TextMutedBrush}" FontFamily="Consolas" />
                                                     <Border Classes="badge-ok" Padding="6,0" CornerRadius="4" VerticalAlignment="Center" IsVisible="{Binding IsStudent}">
@@ -423,6 +457,198 @@
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
                         </ListBox>
+
+                        <!-- ============ 账号详情：简介 + 积分数据面板 + 设备号 + 保活 ============ -->
+                        <Border IsVisible="{Binding HasAccountDetail}" CornerRadius="10"
+                                Background="{DynamicResource RowBgBrush}" Padding="14,12"
+                                BorderBrush="{DynamicResource BorderBrushKey}" BorderThickness="1">
+                            <StackPanel Spacing="12">
+
+                                <!-- 头部：账号名 + 副标题（手机号/会员/学生/UID） -->
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="{Binding DetailTitle}" FontSize="14" FontWeight="Bold"
+                                               Foreground="{DynamicResource TextMainBrush}"
+                                               TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding DetailSubtitle}" Classes="text-caption"
+                                               TextWrapping="Wrap" />
+                                </StackPanel>
+
+                                <!-- ===== 账号简介（可编辑，停止输入后自动保存） ===== -->
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="账号简介" FontSize="13" FontWeight="SemiBold" />
+                                    <TextBox Text="{Binding AccountBio}" AcceptsReturn="True" Height="58"
+                                             TextWrapping="Wrap" MaxLength="200" FontSize="12"
+                                             PlaceholderText="给这个账号写一句备注，例如：主号 · 只用来跑代码" />
+                                    <TextBlock Text="{Binding AccountBioHint}" Classes="text-caption" />
+                                </StackPanel>
+
+                                <Border Classes="row-sep" Margin="0" />
+
+                                <!-- ===== 积分数据面板：剩余 / 总额度 / 已消耗 / 累计获得 / 今日 / 签到天数 ===== -->
+                                <StackPanel Spacing="8">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Grid.Column="0" Text="积分数据" FontSize="13" FontWeight="SemiBold"
+                                                   VerticalAlignment="Center" />
+                                        <Button Grid.Column="1" Classes="btn" Content="刷新数据"
+                                                Command="{Binding RefreshAccountStatsCommand}"
+                                                IsEnabled="{Binding !StatsLoading}" Padding="12,4" FontSize="12" />
+                                    </Grid>
+
+                                    <!-- 主口径三块：剩余 / 已消耗 / 累计获得 -->
+                                    <Grid ColumnDefinitions="*,8,*,8,*">
+                                        <Border Grid.Column="0" Classes="stat-tile">
+                                            <StackPanel Spacing="2">
+                                                <TextBlock Text="剩余积分" Classes="stat-label" />
+                                                <TextBlock Text="{Binding StatRemaining}" Classes="stat-value" />
+                                            </StackPanel>
+                                        </Border>
+                                        <Border Grid.Column="2" Classes="stat-tile">
+                                            <StackPanel Spacing="2">
+                                                <TextBlock Text="已消耗" Classes="stat-label" />
+                                                <TextBlock Text="{Binding StatConsumed}" Classes="stat-value" />
+                                            </StackPanel>
+                                        </Border>
+                                        <Border Grid.Column="4" Classes="stat-tile">
+                                            <StackPanel Spacing="2">
+                                                <TextBlock Text="累计获得" Classes="stat-label" />
+                                                <TextBlock Text="{Binding StatTotalGained}" Classes="stat-value" />
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
+
+                                    <!-- 次级口径三块：总额度 / 今日获得 / 连签天数 -->
+                                    <Grid ColumnDefinitions="*,8,*,8,*">
+                                        <Border Grid.Column="0" Classes="stat-tile">
+                                            <StackPanel Spacing="2">
+                                                <TextBlock Text="总额度" Classes="stat-label" />
+                                                <TextBlock Text="{Binding StatQuota}" Classes="stat-value" />
+                                            </StackPanel>
+                                        </Border>
+                                        <Border Grid.Column="2" Classes="stat-tile">
+                                            <StackPanel Spacing="2">
+                                                <TextBlock Text="今日获得" Classes="stat-label" />
+                                                <TextBlock Text="{Binding StatTodayGained}" Classes="stat-value" />
+                                            </StackPanel>
+                                        </Border>
+                                        <Border Grid.Column="4" Classes="stat-tile">
+                                            <StackPanel Spacing="2">
+                                                <TextBlock Text="连续签到" Classes="stat-label" />
+                                                <TextBlock Text="{Binding StatStreak}" Classes="stat-value" />
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
+
+                                    <!-- 文本明细行 -->
+                                    <StackPanel Spacing="3" Margin="2,2,0,0">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <TextBlock Text="签到天数" Classes="stat-label" VerticalAlignment="Center" />
+                                            <TextBlock Text="{Binding StatSignedDays}" Classes="text-caption"
+                                                       FontWeight="SemiBold" VerticalAlignment="Center" />
+                                            <TextBlock Text="最近签到" Classes="stat-label" VerticalAlignment="Center"
+                                                       Margin="10,0,0,0" />
+                                            <TextBlock Text="{Binding StatLastCheckin}" Classes="text-caption"
+                                                       FontWeight="SemiBold" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                        <TextBlock Text="{Binding StatBadges}" Classes="text-caption" TextWrapping="Wrap" />
+                                        <TextBlock Text="{Binding StatUpdatedAt}" Classes="text-caption" />
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <Border Classes="row-sep" Margin="0" />
+
+                                <!-- ===== 设备号（16 位数字，可自定义） ===== -->
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="设备号（16 位数字）" FontSize="13" FontWeight="SemiBold" />
+                                    <TextBlock Text="签到接口以设备号做风控，同号会被判定为同一台设备而报「参与用户太多」。每个账号应各自独立。"
+                                               Classes="text-caption" TextWrapping="Wrap" />
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <TextBox Text="{Binding CustomDeviceId}" MaxWidth="220" MinWidth="150"
+                                                 HorizontalAlignment="Left" FontFamily="Consolas,Menlo,monospace"
+                                                 FontSize="12" MaxLength="16" />
+                                        <Button Classes="btn" Content="随机生成" Command="{Binding RandomDeviceIdCommand}"
+                                                Padding="12,5" FontSize="12" />
+                                        <Button Classes="btn-primary" Content="保存设备号" Command="{Binding ApplyDeviceIdCommand}"
+                                                Padding="12,5" FontSize="12" />
+                                    </StackPanel>
+                                    <TextBlock Text="{Binding DeviceIdHint}" Classes="text-caption" TextWrapping="Wrap" />
+                                    <TextBlock Text="修改后云端签到需重新「云端部署」以同步新的设备号。" Classes="text-caption" TextWrapping="Wrap" />
+                                </StackPanel>
+
+                                <Border Classes="row-sep" Margin="0" />
+
+                                <!-- ===== 保活 ===== -->
+                                <StackPanel Spacing="6">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <StackPanel Grid.Column="0" Spacing="2" Margin="0,0,12,0">
+                                            <TextBlock Text="账号保活" FontSize="13" FontWeight="SemiBold" />
+                                            <TextBlock Text="按设定间隔用会话 Cookie 静默续期 Token，避免过期掉线；仅软件运行期间有效"
+                                                       Classes="text-caption" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                        <ToggleSwitch Grid.Column="1" IsChecked="{Binding KeepAliveEnabled}"
+                                                      OnContent="" OffContent="" />
+                                    </Grid>
+
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <TextBlock Text="保活间隔（分钟）" FontSize="12" VerticalAlignment="Center" />
+                                        <TextBox Text="{Binding KeepAliveIntervalText}" MaxWidth="90" MinWidth="70"
+                                                 HorizontalAlignment="Left"
+                                                 IsEnabled="{Binding KeepAliveEnabled}" />
+                                        <Button Classes="btn" Content="立即保活" Command="{Binding KeepAliveNowCommand}"
+                                                IsEnabled="{Binding KeepAliveEnabled}" Padding="12,5" FontSize="12" />
+                                    </StackPanel>
+                                    <TextBlock Text="{Binding KeepAliveHint}" Classes="text-caption" />
+                                    <TextBlock Text="{Binding KeepAliveStateText}" Classes="text-caption" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Border>
+
+                <!-- ===== 安全检查（账号与本地） ===== -->
+                <Border Classes="card">
+                    <StackPanel Spacing="12">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Grid.Column="0" Spacing="2">
+                                <TextBlock Text="安全检查" Classes="card-title" />
+                                <TextBlock Text="检查配置加密、明文残留、设备号合规、登录态有效期、日志脱敏等；仅在本机判断，不上传任何数据"
+                                           Classes="text-caption" TextWrapping="Wrap" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding SecuritySummary}" Classes="text-caption" VerticalAlignment="Center" />
+                                <Button Classes="btn-primary" Content="开始检查" Command="{Binding RunSecurityAuditCommand}"
+                                        IsEnabled="{Binding !SecurityRunning}" Padding="12,5" FontSize="12" />
+                            </StackPanel>
+                        </Grid>
+
+                        <TextBlock Text="点「开始检查」生成结论。" Classes="text-caption"
+                                   IsVisible="{Binding !SecurityHasRun}" />
+
+                        <ItemsControl ItemsSource="{Binding SecurityFindings}">
+                            <ItemsControl.ItemTemplate>
+                                <!-- 显式声明 x:DataType，让模板里的绑定成为编译期可校验的强类型绑定 -->
+                                <DataTemplate x:DataType="sec:SecurityFinding">
+                                    <Border Classes="sec-row" Margin="0,0,0,6">
+                                        <Grid ColumnDefinitions="Auto,*,Auto">
+                                            <TextBlock Grid.Column="0" Text="{Binding Icon}" FontSize="13"
+                                                       VerticalAlignment="Top" Margin="0,1,8,0" />
+                                            <StackPanel Grid.Column="1" Spacing="2">
+                                                <TextBlock Text="{Binding Title}" FontSize="12.5" FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource TextMainBrush}" />
+                                                <TextBlock Text="{Binding Detail}" FontSize="11"
+                                                           Foreground="{DynamicResource TextMutedBrush}"
+                                                           TextWrapping="Wrap" />
+                                            </StackPanel>
+                                            <Border Grid.Column="2" CornerRadius="999" Padding="8,2"
+                                                    VerticalAlignment="Top" Margin="8,0,0,0"
+                                                    Background="{Binding LevelBgBrush}">
+                                                <TextBlock Text="{Binding LevelText}" FontSize="10"
+                                                           Foreground="{Binding LevelFgBrush}" />
+                                            </Border>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
                     </StackPanel>
                 </Border>
 

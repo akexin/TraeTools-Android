@@ -258,8 +258,7 @@ public class CheckinDatabase : IDisposable
     }
 
     /// <summary>获取某账号的剩余积分趋势（仪表盘折线图用），取最近 N 条。</summary>
-    public List<(DateTime Date, double Remaining)> GetSnapshotTrend(string accountId, int take = 14)
-    {
+    public List<(DateTime Date, double Remaining)> GetSnapshotTrend(string accountId, int take = 14)    {
         var result = new List<(DateTime, double)>();
         using var cmd = _conn.CreateCommand();
         cmd.CommandText = $"""
@@ -312,6 +311,114 @@ public class CheckinDatabase : IDisposable
             });
         }
         return result;
+    }
+
+    // ==================== 单账号统计（账号详情数据面板用） ====================
+
+    /// <summary>
+    /// 某账号的签到统计：累计获得积分、今日获得、有记录的签到天数、首末签到日期。
+    ///
+    /// 归属判定同时接受 account_id（正常写入的 Guid）与 account_name（旧版文本文件迁移
+    /// 过来的历史行以昵称充当 id），否则老用户的累计数据会显示为 0。
+    /// </summary>
+    public AccountStatsDto GetAccountStats(string? accountId, string? accountName = null)
+    {
+        var result = new AccountStatsDto();
+        try
+        {
+            using var cmd = _conn.CreateCommand();
+            cmd.CommandText = """
+                SELECT COALESCE(SUM(credits), 0),
+                       COUNT(DISTINCT date),
+                       COALESCE(MIN(date), ''),
+                       COALESCE(MAX(date), '')
+                FROM checkin_record
+                WHERE account_id = $id OR ($name <> '' AND account_name = $name);
+                """;
+            cmd.Parameters.AddWithValue("$id", accountId ?? "");
+            cmd.Parameters.AddWithValue("$name", accountName ?? "");
+            using var reader = cmd.ExecuteReader();
+            if (reader.Read())
+            {
+                result.TotalCredits = reader.IsDBNull(0) ? 0 : reader.GetDouble(0);
+                result.SignedDays = reader.IsDBNull(1) ? 0 : reader.GetInt32(1);
+                result.FirstDate = reader.IsDBNull(2) ? "" : reader.GetString(2);
+                result.LastDate = reader.IsDBNull(3) ? "" : reader.GetString(3);
+            }
+            reader.Close();
+            result.TodayCredits = GetAccountTodayCredits(accountId, accountName);
+        }
+        catch { /* 统计失败返回空结果，界面显示占位符 */ }
+        return result;
+    }
+
+    private double GetAccountTodayCredits(string? accountId, string? accountName)
+    {
+        try
+        {
+            using var cmd = _conn.CreateCommand();
+            cmd.CommandText = """
+                SELECT COALESCE(SUM(credits), 0)
+                FROM checkin_record
+                WHERE date = $today AND (account_id = $id OR ($name <> '' AND account_name = $name));
+                """;
+            cmd.Parameters.AddWithValue("$today", DateTime.Today.ToString("yyyy-MM-dd"));
+            cmd.Parameters.AddWithValue("$id", accountId ?? "");
+            cmd.Parameters.AddWithValue("$name", accountName ?? "");
+            var v = cmd.ExecuteScalar();
+            return v == null || v == DBNull.Value ? 0 : Convert.ToDouble(v);
+        }
+        catch { return 0; }
+    }
+
+    /// <summary>某账号有签到记录的日期集合（升序）。</summary>
+    public List<DateTime> GetAccountSignedDates(string? accountId, string? accountName = null)
+    {
+        var result = new List<DateTime>();
+        try
+        {
+            using var cmd = _conn.CreateCommand();
+            cmd.CommandText = """
+                SELECT DISTINCT date FROM checkin_record
+                WHERE account_id = $id OR ($name <> '' AND account_name = $name)
+                ORDER BY date ASC;
+                """;
+            cmd.Parameters.AddWithValue("$id", accountId ?? "");
+            cmd.Parameters.AddWithValue("$name", accountName ?? "");
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                if (DateTime.TryParse(reader.GetString(0), out var dt)) result.Add(dt.Date);
+            }
+        }
+        catch { /* 读取失败返回空集合 */ }
+        return result;
+    }
+
+    /// <summary>
+    /// 当前连续签到天数：从最近一次签到日往前数连续日。
+    /// 「今天尚未签到」不算断签——此时从昨天起算，避免白天打开软件就看到连签被清零。
+    /// </summary>
+    public int GetAccountStreakDays(string? accountId, string? accountName = null)
+    {
+        try
+        {
+            var dates = GetAccountSignedDates(accountId, accountName);
+            if (dates.Count == 0) return 0;
+            dates.Sort();
+            var cursor = dates[^1];
+            // 最后一次签到既不是今天也不是昨天 → 连签已断
+            if ((DateTime.Today - cursor).TotalDays > 1) return 0;
+            int streak = 1;
+            for (int i = dates.Count - 2; i >= 0; i--)
+            {
+                if ((cursor - dates[i]).TotalDays == 1) { streak++; cursor = dates[i]; }
+                else if ((cursor - dates[i]).TotalDays == 0) continue;   // 同日多条
+                else break;
+            }
+            return streak;
+        }
+        catch { return 0; }
     }
 
     // ==================== 旧数据迁移 ====================
@@ -443,5 +550,19 @@ public class CheckinDatabase : IDisposable
         public string AccountName { get; set; } = "";
         public int SignedDays { get; set; }
         public double TotalCredits { get; set; }
+    }
+
+    /// <summary>单账号签到统计（账号详情数据面板）。</summary>
+    public class AccountStatsDto
+    {
+        /// <summary>累计获得积分（历史全部签到之和）。</summary>
+        public double TotalCredits { get; set; }
+        /// <summary>今日获得积分。</summary>
+        public double TodayCredits { get; set; }
+        /// <summary>有签到记录的天数。</summary>
+        public int SignedDays { get; set; }
+        /// <summary>最早/最近签到日期（yyyy-MM-dd，无记录为空串）。</summary>
+        public string FirstDate { get; set; } = "";
+        public string LastDate { get; set; } = "";
     }
 }

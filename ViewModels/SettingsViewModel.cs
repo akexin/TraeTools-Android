@@ -306,6 +306,7 @@ public partial class SettingsViewModel : ViewModelBase
                 // 账号资料（昵称/脱敏手机号/学生认证）后台刷新并回填展示
                 await AccountHelpers.RefreshProfileAsync(acc);
                 item.MobileText = acc.MobileMasked ?? "";
+                item.BioText = acc.Bio ?? "";
                 item.IsStudent = acc.IsStudent;
                 var accName = string.IsNullOrEmpty(acc.Name)
                     ? $"账号@{(acc.AccountUid ?? acc.Id.Substring(0, 6))}"
@@ -342,6 +343,18 @@ public partial class SettingsViewModel : ViewModelBase
 
         // 顺手把新出现的头像加载进卡片
         LoadAvatars();
+
+        // 保活/签到是后台跑的，刷新账号状态时一并把详情面板的保活文案与本地统计拉新
+        try
+        {
+            var acc = SelectedTraeAccount();
+            if (acc != null)
+            {
+                RefreshKeepAliveState(acc);
+                LoadLocalStats(acc);
+            }
+        }
+        catch { /* 面板刷新失败不影响列表 */ }
     }
 
     /// <summary>为账号列表卡片异步加载头像（有 AvatarUrl 且未加载过才拉，内存缓存）。</summary>
@@ -397,6 +410,9 @@ public partial class SettingsViewModel : ViewModelBase
             }
         }
         catch { /* 联动失败不影响 */ }
+
+        // 账号详情面板（简介 / 积分数据 / 设备号 / 保活）随选中账号一起刷新
+        LoadAccountDetail();
     }
 
     /// <summary>
@@ -426,6 +442,468 @@ public partial class SettingsViewModel : ViewModelBase
             PushStatus = "更换失败：" + ex.Message;
         }
     }
+
+    // ==================== 账号详情面板：简介 / 积分数据 / 设备号 / 保活 ====================
+
+    /// <summary>是否选中了真实账号（驱动详情面板显隐）。</summary>
+    [ObservableProperty]
+    private bool _hasAccountDetail;
+
+    /// <summary>账号简介（用户自填，双向绑定；编辑后防抖落盘）。</summary>
+    [ObservableProperty]
+    private string _accountBio = "";
+
+    /// <summary>简介的辅助说明（字数提示 / 保存状态）。</summary>
+    [ObservableProperty]
+    private string _accountBioHint = "";
+
+    /// <summary>详情面板里的展示名与副标题。</summary>
+    [ObservableProperty]
+    private string _detailTitle = "";
+    [ObservableProperty]
+    private string _detailSubtitle = "";
+
+    // ---- 积分数据面板 ----
+
+    [ObservableProperty] private string _statRemaining = "—";
+    [ObservableProperty] private string _statQuota = "—";
+    [ObservableProperty] private string _statConsumed = "—";
+    [ObservableProperty] private string _statTotalGained = "—";
+    [ObservableProperty] private string _statTodayGained = "—";
+    [ObservableProperty] private string _statSignedDays = "—";
+    [ObservableProperty] private string _statStreak = "—";
+    [ObservableProperty] private string _statLastCheckin = "—";
+    [ObservableProperty] private string _statBadges = "—";
+    [ObservableProperty] private string _statUpdatedAt = "云端数据：—";
+
+    /// <summary>正在拉取云端积分数据（防止重复点击）。</summary>
+    [ObservableProperty]
+    private bool _statsLoading;
+
+    // ---- 自定义设备号 ----
+
+    /// <summary>设备号输入框（暂存，点「保存」才写入账号；便于校验后再落盘）。</summary>
+    [ObservableProperty]
+    private string _customDeviceId = "";
+
+    /// <summary>设备号校验提示（实时反馈，含与其它账号重复检测）。</summary>
+    [ObservableProperty]
+    private string _deviceIdHint = "";
+
+    // ---- 保活 ----
+
+    [ObservableProperty] private bool _keepAliveEnabled;
+    [ObservableProperty] private string _keepAliveIntervalText = "60";
+    [ObservableProperty] private string _keepAliveStateText = "未开启";
+    /// <summary>保活间隔的输入提示（非法输入时给出区间说明）。</summary>
+    [ObservableProperty] private string _keepAliveHint = "范围 5–1440 分钟";
+
+    // ---- 安全检查 ----
+
+    /// <summary>安全检查结论列表（风险在前）。</summary>
+    public ObservableCollection<Services.Security.SecurityFinding> SecurityFindings { get; } = new();
+
+    [ObservableProperty] private string _securitySummary = "尚未检查";
+    [ObservableProperty] private bool _securityHasRun;
+    [ObservableProperty] private bool _securityRunning;
+
+    private Avalonia.Threading.DispatcherTimer? _bioSaveTimer;
+
+    /// <summary>当前选中的真实账号对象（无则 null）。</summary>
+    private TraeCheckin.TraeAccount? SelectedTraeAccount()
+        => MainViewModel.AppConfig?.Accounts.FirstOrDefault(a => a.Id == SelectedAccount?.Id);
+
+    /// <summary>把选中账号的简介 / 设备号 / 保活 / 统计一次性灌进详情面板。</summary>
+    private void LoadAccountDetail()
+    {
+        try
+        {
+            var acc = SelectedTraeAccount();
+            if (acc == null)
+            {
+                HasAccountDetail = false;
+                return;
+            }
+            HasAccountDetail = true;
+
+            DetailTitle = string.IsNullOrWhiteSpace(acc.Name)
+                ? (acc.ScreenName ?? (acc.MobileMasked ?? "未命名账号"))
+                : acc.Name!;
+            DetailSubtitle = BuildSubtitle(acc);
+
+            _loadingDetail = true;   // 抑制这些赋值触发的「立即保存」回调
+            // 简介正在编辑（防抖窗口内）时不要用磁盘值覆盖输入框，否则会把用户刚打的字吃掉
+            if (!IsEditingBio)
+            {
+                AccountBio = acc.Bio ?? "";
+                AccountBioHint = BioHintFor(acc.Bio);
+            }
+            CustomDeviceId = acc.DeviceId ?? "";
+            DeviceIdHint = ValidateDeviceId(CustomDeviceId, acc);
+            KeepAliveEnabled = acc.KeepAliveEnabled;
+            KeepAliveIntervalText = TraeCheckin.TraeAccount
+                .ClampKeepAliveMinutes(acc.KeepAliveIntervalMinutes).ToString();
+            KeepAliveHint = $"范围 {TraeCheckin.TraeAccount.MinKeepAliveMinutes}–{TraeCheckin.TraeAccount.MaxKeepAliveMinutes} 分钟";
+            _loadingDetail = false;
+
+            RefreshKeepAliveState(acc);
+            LoadLocalStats(acc);
+        }
+        catch { /* 面板加载失败不影响其它设置 */ }
+    }
+
+    private bool _loadingDetail;
+
+    /// <summary>简介是否处于「刚打完字、还没落盘」的防抖窗口内。</summary>
+    private bool IsEditingBio => _bioSaveTimer?.IsEnabled == true;
+
+    private static string BuildSubtitle(TraeCheckin.TraeAccount acc)
+    {
+        var parts = new List<string>();
+        if (!string.IsNullOrWhiteSpace(acc.MobileMasked)) parts.Add(acc.MobileMasked!);
+        if (acc.IsStudent) parts.Add("学生认证");
+        parts.Add(acc.IsMember ? "会员" : "非会员");
+        if (!string.IsNullOrWhiteSpace(acc.AccountUid)) parts.Add("UID " + acc.AccountUid);
+        return string.Join(" · ", parts);
+    }
+
+    private static string BioHintFor(string? bio)
+    {
+        var len = (bio ?? "").Length;
+        return len == 0 ? "留空则不显示简介" : $"{len} 字 · 已自动保存";
+    }
+
+    /// <summary>设备号校验：必须 16 位数字，且不得与其它账号重复。</summary>
+    private string ValidateDeviceId(string? id, TraeCheckin.TraeAccount self)
+    {
+        var v = (id ?? "").Trim();
+        if (v.Length == 0) return "不能为空（留空会被自动补发一个新号）";
+        if (v.Length != 16) return $"需要 16 位，当前 {v.Length} 位";
+        if (!v.All(char.IsDigit)) return "只能包含数字（0-9）";
+        var dup = MainViewModel.AppConfig?.Accounts
+            .FirstOrDefault(a => a.Id != self.Id && a.DeviceId == v);
+        if (dup != null)
+            return "与账号「" + (string.IsNullOrWhiteSpace(dup.Name) ? dup.Id[..6] : dup.Name) + "」重复，会触发风控";
+        return "格式正确 ✓";
+    }
+
+    private void RefreshKeepAliveState(TraeCheckin.TraeAccount acc)
+    {
+        if (!acc.KeepAliveEnabled)
+        {
+            KeepAliveStateText = "未开启（Token 过期后需等下次签到才会续期）";
+            return;
+        }
+        var when = acc.LastKeepAliveAt?.ToString("MM-dd HH:mm") ?? "尚未执行";
+        KeepAliveStateText = acc.LastKeepAliveAt == null
+            ? "已开启，等待首次执行"
+            : $"最近 {when} · {(string.IsNullOrEmpty(acc.LastKeepAliveMessage) ? "—" : acc.LastKeepAliveMessage)}";
+    }
+
+    /// <summary>只读本地数据（签到库）算出统计，不发网络请求，切换账号可立即出数。</summary>
+    private void LoadLocalStats(TraeCheckin.TraeAccount acc)
+    {
+        try
+        {
+            var db = MainViewModel.CheckinDb;
+            double total = 0, today = 0;
+            int days = 0, streak = 0;
+            string last = "—";
+
+            if (db != null)
+            {
+                var stats = db.GetAccountStats(acc.Id, acc.Name);
+                total = stats.TotalCredits;
+                today = stats.TodayCredits;
+                days = stats.SignedDays;
+                streak = db.GetAccountStreakDays(acc.Id, acc.Name);
+                last = string.IsNullOrEmpty(stats.LastDate) ? "—" : stats.LastDate;
+            }
+
+            StatTotalGained = $"{total:0}";
+            StatTodayGained = $"+{today:0}";
+            StatSignedDays = days.ToString();
+            StatStreak = streak.ToString();
+            StatLastCheckin = last;
+
+            // 额度来自上次云端拉取（保活或手动刷新时更新）
+            StatRemaining = acc.RemainingCredits >= 0 ? $"{acc.RemainingCredits:0}" : "—";
+            StatQuota = acc.QuotaLimit >= 0 ? $"{acc.QuotaLimit:0}" : "—";
+            StatConsumed = acc.QuotaUsed >= 0 ? $"{acc.QuotaUsed:0}" : "—";
+            StatUpdatedAt = acc.StatsUpdatedAt.HasValue
+                ? "云端数据：" + acc.StatsUpdatedAt.Value.ToString("MM-dd HH:mm")
+                : "云端数据：尚未获取（点「刷新数据」）";
+
+            var badges = new List<string>();
+            badges.Add(acc.IsMember ? "会员" : "非会员");
+            if (acc.IsStudent) badges.Add("学生认证");
+            badges.Add(acc.LastCheckinDate.HasValue && acc.LastCheckinDate.Value.Date == DateTime.Today
+                ? "今日已签" : "今日未签");
+            var exp = TraeCheckin.TokenUtils.TryGetExpiry(acc.Token);
+            badges.Add(exp.HasValue
+                ? (exp.Value > DateTime.Now ? $"Token 有效至 {exp.Value:MM-dd HH:mm}" : "Token 已过期")
+                : "Token 有效期未知");
+            StatBadges = string.Join(" · ", badges);
+        }
+        catch { /* 统计失败保留占位符 */ }
+    }
+
+    /// <summary>从云端拉取该账号的额度（总配额 / 已消耗 / 剩余）并写回账号，随后刷新面板。</summary>
+    [RelayCommand]
+    private async Task RefreshAccountStats()
+    {
+        if (StatsLoading) return;
+        try
+        {
+            var api = MainViewModel.CheckinApi;
+            var cfg = MainViewModel.AppConfig;
+            var acc = SelectedTraeAccount();
+            if (api == null || cfg == null || acc == null)
+            {
+                PushStatus = "请先选择账号";
+                return;
+            }
+            StatsLoading = true;
+            PushStatus = "正在拉取积分数据…";
+
+            bool valid = await AccountHelpers.EnsureValidTokenAsync(acc);
+            if (!valid)
+            {
+                PushStatus = "会话已失效，请重新登录后再刷新";
+                return;
+            }
+            var ent = await api.GetEntitlementAsync(acc.Token ?? "", acc.DeviceId);
+            if (ent == null)
+            {
+                PushStatus = "拉取失败：" + (api.LastError ?? "未知原因");
+                return;
+            }
+            acc.QuotaLimit = ent.Limit;
+            acc.QuotaUsed = ent.Used;
+            acc.RemainingCredits = ent.Remaining;
+            acc.StatsUpdatedAt = DateTime.Now;
+            try { MainViewModel.CheckinDb?.InsertSnapshot(acc.Id, ent.Remaining); } catch { /* 快照失败不影响 */ }
+            try { cfg.Save(); } catch { /* 保存失败仍刷新界面 */ }
+            LoadLocalStats(acc);
+            PushStatus = $"积分已刷新：剩余 {ent.Remaining:0}（已用 {ent.Used:0} / 总额 {ent.Limit:0}）✓";
+        }
+        catch (Exception ex)
+        {
+            PushStatus = "刷新失败：" + ex.Message;
+        }
+        finally
+        {
+            StatsLoading = false;
+        }
+    }
+
+    /// <summary>保存自定义设备号（16 位数字校验 + 重复校验）。</summary>
+    [RelayCommand]
+    private void ApplyDeviceId()
+    {
+        try
+        {
+            var cfg = MainViewModel.AppConfig;
+            var acc = SelectedTraeAccount();
+            if (cfg == null || acc == null) { PushStatus = "请先选择账号"; return; }
+
+            var v = (CustomDeviceId ?? "").Trim();
+            var hint = ValidateDeviceId(v, acc);
+            DeviceIdHint = hint;
+            if (hint != "格式正确 ✓") { PushStatus = "设备号不合法：" + hint; return; }
+
+            if (acc.DeviceId == v) { PushStatus = "设备号未变化"; return; }
+
+            var old = acc.DeviceId;
+            acc.DeviceId = v;
+            try { cfg.Save(); } catch { /* 提示仍展示 */ }
+            DeviceIdText = v;
+            AccountHelpers.CheckinLog(DisplayOf(acc), $"自定义设备号：{old} → {v}");
+            PushStatus = "设备号已保存 ✓（本地生效；云端需重新部署同步）";
+        }
+        catch (Exception ex)
+        {
+            PushStatus = "保存失败：" + ex.Message;
+        }
+    }
+
+    /// <summary>随机生成一个不与其它账号重复的 16 位设备号，填进输入框（仍需点「保存」）。</summary>
+    [RelayCommand]
+    private void RandomDeviceId()
+    {
+        try
+        {
+            var acc = SelectedTraeAccount();
+            if (acc == null) { PushStatus = "请先选择账号"; return; }
+            var used = new HashSet<string>(
+                MainViewModel.AppConfig?.Accounts.Where(a => a.Id != acc.Id).Select(a => a.DeviceId)
+                    ?? Enumerable.Empty<string>(), StringComparer.Ordinal);
+            string id;
+            do { id = Random.Shared.NextInt64(1_000_000_000_000_000L, 10_000_000_000_000_000L).ToString(); }
+            while (used.Contains(id));
+            CustomDeviceId = id;
+            DeviceIdHint = ValidateDeviceId(id, acc);
+            PushStatus = "已生成新设备号，点「保存设备号」生效";
+        }
+        catch (Exception ex)
+        {
+            PushStatus = "生成失败：" + ex.Message;
+        }
+    }
+
+    /// <summary>立即对选中账号执行一次保活（不等定时器）。</summary>
+    [RelayCommand]
+    private async Task KeepAliveNow()
+    {
+        try
+        {
+            var cfg = MainViewModel.AppConfig;
+            var acc = SelectedTraeAccount();
+            if (cfg == null || acc == null) { PushStatus = "请先选择账号"; return; }
+            if (!acc.KeepAliveEnabled)
+            {
+                PushStatus = "该账号未开启保活，请先打开开关";
+                return;
+            }
+
+            PushStatus = "正在保活…";
+            var (ok, message) = await TraeTools.Services.KeepAlive.KeepAliveService.KeepAliveOneAsync(acc);
+            acc.LastKeepAliveAt = DateTime.Now;
+            acc.LastKeepAliveMessage = message;
+            try { cfg.Save(); } catch { /* 保存失败仍展示结果 */ }
+            RefreshKeepAliveState(acc);
+            LoadLocalStats(acc);
+            PushStatus = (ok ? "保活成功 ✓ " : "保活失败：") + message;
+        }
+        catch (Exception ex)
+        {
+            PushStatus = "保活异常：" + ex.Message;
+        }
+    }
+
+    /// <summary>运行账号与本地安全检查，把结论填进列表。</summary>
+    [RelayCommand]
+    private async Task RunSecurityAudit()
+    {
+        if (SecurityRunning) return;
+        try
+        {
+            SecurityRunning = true;
+            SecurityFindings.Clear();
+            PushStatus = "正在检查…";
+
+            // 审计需要读配置文件与日志文件末尾（最多 12 × 64KB），放到后台线程避免卡住界面；
+            // await 之后自动回到 UI 线程，因此可以直接改 ObservableCollection。
+            var cfg = MainViewModel.AppConfig;
+            var findings = await Task.Run(() => Services.Security.SecurityAudit.Run(cfg));
+
+            foreach (var f in findings) SecurityFindings.Add(f);
+            SecuritySummary = Services.Security.SecurityAudit.Summarize(findings);
+            SecurityHasRun = true;
+
+            int risk = findings.Count(f => f.IsRisk);
+            int warn = findings.Count(f => f.IsWarn);
+            AccountHelpers.AppLog("security", "",
+                $"安全检查完成：风险 {risk} 项，警告 {warn} 项，通过 {findings.Count - risk - warn} 项");
+            PushStatus = risk > 0 ? $"发现 {risk} 项风险，请查看下方结论" : "安全检查完成 ✓";
+        }
+        catch (Exception ex)
+        {
+            PushStatus = "安全检查失败：" + ex.Message;
+        }
+        finally
+        {
+            SecurityRunning = false;
+        }
+    }
+
+    /// <summary>账号简介防抖落盘：边打字边写文件太浪费，停手 800ms 再写。</summary>
+    partial void OnAccountBioChanged(string value)
+    {
+        if (_loadingDetail) return;
+        AccountBioHint = BioHintFor(value) + " · 编辑中…";
+        _bioSaveTimer ??= new Avalonia.Threading.DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(800),
+        };
+        _bioSaveTimer.Stop();
+        _bioSaveTimer.Tick -= OnBioSaveTick;
+        _bioSaveTimer.Tick += OnBioSaveTick;
+        _bioSaveTimer.Start();
+    }
+
+    private void OnBioSaveTick(object? sender, EventArgs e)
+    {
+        _bioSaveTimer?.Stop();
+        try
+        {
+            var cfg = MainViewModel.AppConfig;
+            var acc = SelectedTraeAccount();
+            if (cfg == null || acc == null) return;
+            var text = (AccountBio ?? "").Trim();
+            if (string.Equals(acc.Bio ?? "", text, StringComparison.Ordinal)) return;
+            acc.Bio = text;
+            cfg.Save();
+            AccountBioHint = BioHintFor(text);
+            MainViewModel.Instance?.RefreshSwitchAccounts();
+        }
+        catch { /* 保存失败保留「编辑中…」提示，用户可再改一次触发重试 */ }
+    }
+
+    /// <summary>设备号输入框变化 → 实时校验提示。</summary>
+    partial void OnCustomDeviceIdChanged(string value)
+    {
+        if (_loadingDetail) return;
+        var acc = SelectedTraeAccount();
+        if (acc != null) DeviceIdHint = ValidateDeviceId(value, acc);
+    }
+
+    /// <summary>保活开关切换 → 立即持久化。</summary>
+    partial void OnKeepAliveEnabledChanged(bool value)
+    {
+        if (_loadingDetail) return;
+        try
+        {
+            var cfg = MainViewModel.AppConfig;
+            var acc = SelectedTraeAccount();
+            if (cfg == null || acc == null) return;
+            acc.KeepAliveEnabled = value;
+            // 刚开启时清掉上次的执行时间，让它在下一轮定时器（≤30 秒）里立即跑一次
+            if (value) acc.LastKeepAliveAt = null;
+            cfg.Save();
+            RefreshKeepAliveState(acc);
+            AccountHelpers.AppLog("keepalive", DisplayOf(acc), value ? "已开启账号保活" : "已关闭账号保活");
+            PushStatus = value ? "已开启保活，稍后自动执行首次续期" : "已关闭保活";
+        }
+        catch { /* 忽略 */ }
+    }
+
+    /// <summary>保活间隔输入 → 合法则持久化，非法则只提示不写入。</summary>
+    partial void OnKeepAliveIntervalTextChanged(string value)
+    {
+        if (_loadingDetail) return;
+        try
+        {
+            var acc = SelectedTraeAccount();
+            if (acc == null) return;
+            if (!int.TryParse((value ?? "").Trim(), out var minutes))
+            {
+                KeepAliveHint = "请输入数字（分钟）";
+                return;
+            }
+            var clamped = TraeCheckin.TraeAccount.ClampKeepAliveMinutes(minutes);
+            KeepAliveHint = clamped != minutes
+                ? $"已收敛到合法区间：{TraeCheckin.TraeAccount.MinKeepAliveMinutes}–{TraeCheckin.TraeAccount.MaxKeepAliveMinutes}"
+                : $"范围 {TraeCheckin.TraeAccount.MinKeepAliveMinutes}–{TraeCheckin.TraeAccount.MaxKeepAliveMinutes} 分钟";
+            acc.KeepAliveIntervalMinutes = clamped;
+            MainViewModel.AppConfig?.Save();
+        }
+        catch { /* 忽略 */ }
+    }
+
+    private static string DisplayOf(TraeCheckin.TraeAccount acc)
+        => string.IsNullOrEmpty(acc.Name) ? (acc.Id.Length > 6 ? acc.Id[..6] : acc.Id) : acc.Name!;
+
 
     /// <summary>
     /// 一键为全部账号更换全新设备号（#40）：多账号逐个换太麻烦，批量换发规避风控。
@@ -501,6 +979,7 @@ public partial class SettingsViewModel : ViewModelBase
                         Status = acc.LastCheckinDate.HasValue && acc.LastCheckinDate.Value.Date == DateTime.Today ? "已签到" : "待签到",
                         StatusType = acc.LastCheckinDate.HasValue && acc.LastCheckinDate.Value.Date == DateTime.Today ? "ok" : "info",
                         MobileText = acc.MobileMasked ?? "",
+                        BioText = acc.Bio ?? "",
                         IsStudent = acc.IsStudent,
                         CreatedAt = acc.TokenUpdatedAt?.ToString("yyyy-MM-dd HH:mm") ?? "—",
                         IsCurrent = acc.Id == cfg.ActiveAccountId

@@ -25,6 +25,15 @@ public partial class AccountInfo : ObservableObject
     public bool ShowMobile => !string.IsNullOrEmpty(MobileText);
 
     partial void OnMobileTextChanged(string value) => OnPropertyChanged(nameof(ShowMobile));
+
+    /// <summary>账号简介（用户自填，账号列表与详情面板展示）。</summary>
+    [ObservableProperty]
+    private string _bioText = "";
+
+    /// <summary>简介行是否显示（未填写时整行隐藏，避免空行）。</summary>
+    public bool ShowBio => !string.IsNullOrEmpty(BioText);
+
+    partial void OnBioTextChanged(string value) => OnPropertyChanged(nameof(ShowBio));
     /// <summary>是否学生认证（账号管理卡片展示徽章）。</summary>
     [ObservableProperty]
     private bool _isStudent;
