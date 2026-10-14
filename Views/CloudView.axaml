@@ -20,7 +20,7 @@
                     <TextBlock Text="云端签到" Classes="page-title" />
                     <TextBlock Text="GitHub Actions 自动签到 · 永不掉线" Classes="page-subtitle" />
                 </StackPanel>
-                <Button Grid.Column="1" Classes="btn-hero" Content="{Binding ActionButtonText}" Command="{Binding OneClickDeployCommand}" />
+                <Button Grid.Column="1" Classes="btn-primary" Content="{Binding ActionButtonText}" Command="{Binding OneClickDeployCommand}" />
             </Grid>
 
             <!-- ===== 授权状态区 ===== -->
@@ -36,32 +36,29 @@
                 </StackPanel>
             </Border>
 
-            <!-- ===== 部署流程（纯状态展示，非可点操作卡） ===== -->
+            <!-- ===== 部署流程：纵向步骤列表（编号圆点 + 状态色，替代死板的横排 1-2-3） ===== -->
             <Border Classes="card">
-                <StackPanel Spacing="10">
+                <StackPanel Spacing="12">
                     <Grid ColumnDefinitions="*,Auto">
-                        <TextBlock Grid.Column="0" Text="部署流程" Classes="card-title" />
+                        <TextBlock Grid.Column="0" Text="部署流程" Classes="card-title" VerticalAlignment="Center" />
                         <TextBlock Grid.Column="1" Text="一键部署自动完成 · 仅状态展示" Classes="text-caption" />
                     </Grid>
                     <ItemsControl ItemsSource="{Binding Steps}">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <UniformGrid Columns="3" />
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center" Margin="0,4">
-                                    <Border Width="30" Height="30" CornerRadius="15"
-                                            Background="{Binding StatusBgBrush}" BorderBrush="{Binding StatusFgBrush}" BorderThickness="1">
+                                <Grid ColumnDefinitions="30,*" Margin="0,5">
+                                    <!-- 编号节点：当前/已完成状态由 VM 着色 -->
+                                    <Border Grid.Column="0" Width="28" Height="28" CornerRadius="14"
+                                            Background="{Binding StatusBgBrush}" BorderBrush="{Binding StatusFgBrush}" BorderThickness="1"
+                                            VerticalAlignment="Top">
                                         <TextBlock Text="{Binding Index}" FontSize="13" FontWeight="Bold" Foreground="{Binding StatusFgBrush}"
                                                    HorizontalAlignment="Center" VerticalAlignment="Center" />
                                     </Border>
-                                    <StackPanel Spacing="2" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding Title}" FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap" />
-                                        <TextBlock Text="{Binding StatusText}" FontSize="10" Foreground="{Binding StatusFgBrush}" />
+                                    <StackPanel Grid.Column="1" Spacing="2" Margin="12,0,0,0" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Title}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextMainBrush}" />
+                                        <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{Binding StatusFgBrush}" />
                                     </StackPanel>
-                                </StackPanel>
+                                </Grid>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
@@ -69,39 +66,39 @@
                 </StackPanel>
             </Border>
 
-            <!-- ===== Deploy Status ===== -->
+            <!-- ===== Deploy Status：键值对列表 ===== -->
             <Border Classes="card">
-                <StackPanel Spacing="12">
+                <StackPanel Spacing="10">
                     <Grid ColumnDefinitions="*,Auto">
-                        <TextBlock Grid.Column="0" Text="部署状态" Classes="card-title" />
+                        <TextBlock Grid.Column="0" Text="部署状态" Classes="card-title" VerticalAlignment="Center" />
                         <Button Grid.Column="1" Classes="btn-ghost" Content="打开 Actions" Command="{Binding OpenActionsCommand}" />
                     </Grid>
-                    <Grid ColumnDefinitions="*,*,*,*" RowDefinitions="Auto,Auto">
-                        <StackPanel Grid.Row="0" Grid.Column="0" Spacing="4">
-                            <TextBlock Text="GitHub 用户" Classes="text-caption" />
-                            <TextBlock Text="{Binding GitHubUser}" FontSize="13" FontWeight="SemiBold" />
-                        </StackPanel>
-                        <StackPanel Grid.Row="0" Grid.Column="1" Spacing="4">
-                            <TextBlock Text="Fork 仓库" Classes="text-caption" />
-                            <TextBlock Text="{Binding ForkRepo}" FontSize="13" FontWeight="SemiBold" FontFamily="Consolas" />
-                        </StackPanel>
-                        <StackPanel Grid.Row="0" Grid.Column="2" Spacing="4">
-                            <TextBlock Text="cron 表达式" Classes="text-caption" />
-                            <TextBlock Text="{Binding CronExpression}" FontSize="13" FontWeight="SemiBold" FontFamily="Consolas" />
-                        </StackPanel>
-                        <StackPanel Grid.Row="0" Grid.Column="3" Spacing="4">
-                            <TextBlock Text="凭证有效期" Classes="text-caption" />
-                            <TextBlock Text="{Binding CredentialExpiry}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource WarningBrush}" />
-                        </StackPanel>
-                        <StackPanel Grid.Row="1" Grid.Column="0" Spacing="4" Margin="0,8,0,0">
-                            <TextBlock Text="上次运行" Classes="text-caption" />
-                            <TextBlock Text="{Binding LastRun}" FontSize="13" Foreground="{DynamicResource SuccessBrush}" />
-                        </StackPanel>
+                    <!-- KV 行：灰色小标签 + 主值 -->
+                    <Grid ColumnDefinitions="110,*" Margin="0,2">
+                        <TextBlock Grid.Column="0" Text="GitHub 用户" Classes="text-caption" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="1" Text="{Binding GitHubUser}" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                    </Grid>
+                    <Grid ColumnDefinitions="110,*" Margin="0,2">
+                        <TextBlock Grid.Column="0" Text="Fork 仓库" Classes="text-caption" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="1" Text="{Binding ForkRepo}" FontSize="13" FontWeight="SemiBold" FontFamily="Consolas" TextTrimming="CharacterEllipsis" />
+                    </Grid>
+                    <Grid ColumnDefinitions="110,*" Margin="0,2">
+                        <TextBlock Grid.Column="0" Text="cron 表达式" Classes="text-caption" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="1" Text="{Binding CronExpression}" FontSize="13" FontWeight="SemiBold" FontFamily="Consolas" TextTrimming="CharacterEllipsis" />
+                    </Grid>
+                    <Grid ColumnDefinitions="110,*" Margin="0,2">
+                        <TextBlock Grid.Column="0" Text="凭证有效期" Classes="text-caption" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="1" Text="{Binding CredentialExpiry}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource WarningBrush}" TextTrimming="CharacterEllipsis" />
+                    </Grid>
+                    <Grid ColumnDefinitions="110,*" Margin="0,2">
+                        <TextBlock Grid.Column="0" Text="上次运行" Classes="text-caption" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="1" Text="{Binding LastRun}" FontSize="13" Foreground="{DynamicResource SuccessBrush}" TextTrimming="CharacterEllipsis" />
                     </Grid>
 
-                    <Border Background="{DynamicResource WarningSoftBrush}" CornerRadius="12" Padding="14,10" Margin="0,4,0,0">
-                        <StackPanel Orientation="Horizontal" Spacing="10">
-                            <TextBlock Text="⚠" FontSize="16" Foreground="{DynamicResource WarningBrush}" VerticalAlignment="Center" />
+                    <!-- 凭证有效期提示：细长信息条（弱化底色，突出文字） -->
+                    <Border Background="{DynamicResource WarningSoftBrush}" CornerRadius="8" Padding="12,8" Margin="0,4,0,0">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Text="⚠" FontSize="13" Foreground="{DynamicResource WarningBrush}" VerticalAlignment="Center" />
                             <TextBlock Text="{Binding WarningText}" FontSize="12" Foreground="{DynamicResource WarningBrush}" VerticalAlignment="Center" TextWrapping="Wrap" />
                         </StackPanel>
                     </Border>
