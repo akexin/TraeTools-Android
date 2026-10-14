@@ -104,50 +104,43 @@ jobs:
       - name: Install Android workload
         run: dotnet workload install android
 
-      # Android APK：产出**未签名**包，随后由下面的步骤用仓库内置密钥
-      # （signing/traetools.keystore）显式签名。
+      # Android APK：先由 .NET 打包器签名（它会按自己的策略完成 zipalign），
+      # 再**重签**一次以强制三种签名方案齐全。
       #
-      # 为什么不交给 dotnet publish 的 AndroidKeyStore=true 自动签名：
-      # 实测两版行为不一致——v2.0.0 的产物含 v1(JAR) 签名，换密钥后的 v2.0.1
-      # 产物 `Verified using v1 scheme: false`，即 v1 是否产出取决于 .NET for Android
-      # 的内部启发式（与 apksigner 的默认值/minSdk 判定交互），不可控也不可预期。
-      # 显式调用 apksigner 并写死 --v1/--v2/--v3 三个开关，行为才是确定的。
+      # 为什么不自己 zipalign + 签名：.NET 打包出的包已经过它的对齐流程，
+      # 而本机 build-tools 的 zipalign 不支持 -P 16（16KB 页对齐，Android 15+ 对含
+      # 原生库的包有要求），自行 zipalign 会把 16KB 对齐**降级**成 4KB。
+      # 只做重签则完全不触碰 zip 结构，对齐策略保持不变。
       #
       # EnableWindowsTargeting：多目标项目还原需一并还原 net10.0-windows，ubuntu 上必须显式开启
-      - name: Publish (android apk, unsigned)
+      - name: Publish (android apk, signed by dotnet)
         run: |
           dotnet publish TraeTools.csproj -c Release -f net10.0-android \
             -p:EnableWindowsTargeting=true \
             -p:AndroidPackageFormat=apk \
-            -p:AndroidKeyStore=false \
+            -p:AndroidKeyStore=true \
+            -p:AndroidSigningKeyStore="$PWD/signing/traetools.keystore" \
+            -p:AndroidSigningKeyAlias=traetools \
+            -p:AndroidSigningKeyPass=traetools \
+            -p:AndroidSigningStorePass=traetools \
             -o publish-android
           echo "== publish-android 产物 =="
           find publish-android -name "*.apk" -printf "%s\t%p\n" | sort -rn || true
 
-      - name: Sign APK explicitly with repo keystore (v1 + v2 + v3)
+      - name: Re-sign APK (force v1 + v2 + v3)
         run: |
           set -euo pipefail
-          SRC=$(find publish-android -name "cn.akexin.traetools.apk" | head -1)
-          [ -n "$SRC" ] || SRC=$(find publish-android -name "*.apk" ! -iname "*-Signed.apk" | head -1)
-          [ -n "$SRC" ] || { echo "::error::未找到未签名 APK"; exit 1; }
-          echo "unsigned apk: $SRC"
-          ls -lh "$SRC"
+          SRC=$(find publish-android -iname "*-Signed.apk" | head -1)
+          [ -n "$SRC" ] || SRC=$(find publish-android -name "*.apk" | head -1)
+          [ -n "$SRC" ] || { echo "::error::未找到 APK"; exit 1; }
+          echo "input apk: $SRC"
 
           BT=$(ls -d "${ANDROID_HOME:-/usr/local/lib/android/sdk}"/build-tools/* 2>/dev/null | sort -V | tail -1)
-          ZA="$BT/zipalign"; AS="$BT/apksigner"
-          [ -x "$ZA" ] && [ -x "$AS" ] || { echo "::error::zipalign/apksigner not found"; exit 1; }
+          AS="$BT/apksigner"
+          [ -x "$AS" ] || { echo "::error::apksigner not found"; exit 1; }
 
-          # zipalign 必须在签名之前。四参形式对齐到 4 字节并启用页对齐；
-          # -P 16 指定 .so 按 16KB 页对齐（Android 15+ 对含原生库的包有要求），
-          # 老版本 build-tools 不认识 -P 时回退到经典的 -p 4。
-          if "$ZA" -f -p -P 16 4 "$SRC" aligned.apk 2>/dev/null; then
-            echo "zipalign 模式: -f -p -P 16 4"
-          else
-            echo "zipalign 模式: -f -p 4（回退，build-tools 不支持 -P）"
-            "$ZA" -f -p 4 "$SRC" aligned.apk
-          fi
-
-          # 三方案全开：v1 兼容只认 JAR 签名的老设备/第三方安装器，v2/v3 是 Android 7/9+ 的主验签路径
+          # 不传给 v1 的既有签名文件做剥离：apksigner 重签时自行替换签名块与
+          # META-INF 下的 JAR 签名文件。
           "$AS" sign \
             --ks signing/traetools.keystore --ks-type PKCS12 \
             --ks-pass pass:traetools \
@@ -156,8 +149,18 @@ jobs:
             --v1-signing-enabled true \
             --v2-signing-enabled true \
             --v3-signing-enabled true \
-            --out TraeTools-Android.apk aligned.apk
+            --out TraeTools-Android.apk "$SRC"
           ls -lh TraeTools-Android.apk
+
+          # 对齐检查（信息性，不阻断：对齐由 .NET 打包器负责）
+          ZA="$BT/zipalign"
+          if [ -x "$ZA" ]; then
+            if "$ZA" -c -v 4 TraeTools-Android.apk >/dev/null 2>&1; then
+              echo "✅ zipalign 4 字节对齐通过"
+            else
+              echo "::warning::zipalign 检查未通过（信息性，不影响签名有效性）"
+            fi
+          fi
 
       # ===== 签名校验门禁 =====
       # 旧实现只 `apksigner verify --print-certs | head -8 || true`：既不校验退出码，
@@ -210,10 +213,22 @@ jobs:
           ok = ok and v1
 
           # --- v2 / v3：APK Signing Block 中的方案 ID ---
+          # ⚠️ 不能只读「文件尾部 64KB」：中央目录本身在本包里就有 ~73KB，
+          # 签名块位于中央目录**之前**，固定窗口会取不到它而误报「缺失」。
+          # 正确做法：先从尾部 EOCD 读中央目录偏移，再自该偏移向前多读 64KB。
           total = os.path.getsize(APK)
+          cd_off = total
           with open(APK, "rb") as f:
               f.seek(max(0, total - 65536))
+              last = f.read()
+              e = last.rfind(b"PK\x05\x06")
+              if e >= 0:
+                  cd_off = struct.unpack_from("<I", last, e + 16)[0]
+          window_start = max(0, cd_off - 65536)
+          with open(APK, "rb") as f:
+              f.seek(window_start)
               tail = f.read()
+          print(f"中央目录 offset={cd_off} 读取窗口起始={window_start}")
 
           magic_rel = tail.rfind(b"APK Sig Block 42")
           ids = {}
