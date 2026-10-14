@@ -13,15 +13,29 @@
     </Design.DataContext>
 
     <UserControl.Styles>
-        <!-- 会话/模型行卡片：去边框淡底圆角行，减少与外层卡片的双线感 -->
+        <!-- 会话/模型行：去边框淡底圆角行（内层组件 8px 圆角） -->
         <Style Selector="Border.usage-card">
             <Setter Property="Background" Value="{DynamicResource RowBgBrush}" />
-            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="CornerRadius" Value="8" />
             <Setter Property="Padding" Value="12,9" />
+        </Style>
+        <!-- 副指标卡：淡底点缀图标，弱化卡片感 -->
+        <Style Selector="Border.stat-chip">
+            <Setter Property="Background" Value="{DynamicResource CardBgBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrushKey}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="12,10" />
+        </Style>
+        <Style Selector="Border.stat-icon">
+            <Setter Property="Width" Value="26" />
+            <Setter Property="Height" Value="26" />
+            <Setter Property="CornerRadius" Value="13" />
+            <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
     </UserControl.Styles>
 
-    <Grid RowDefinitions="Auto,Auto,Auto,*">
+    <Grid RowDefinitions="Auto,Auto,Auto,Auto,*">
 
             <!-- ===== Header ===== -->
             <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
@@ -30,57 +44,76 @@
                     <TextBlock Text="{Binding CurrentAccount}" Classes="page-subtitle" />
                     <TextBlock Text="{Binding DataRangeText}" Classes="text-caption" />
                 </StackPanel>
-                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                    <TextBlock Text="{Binding StatusMessage}" Classes="text-caption" VerticalAlignment="Center" />
-                    <Button Classes="btn-primary" Content="拉取用量" Command="{Binding RefreshCommand}"
-                            IsEnabled="{Binding !IsLoading}" />
-                </StackPanel>
+                <Button Grid.Column="1" Classes="btn-primary" Content="拉取用量" Command="{Binding RefreshCommand}"
+                        IsEnabled="{Binding !IsLoading}" VerticalAlignment="Center" />
             </Grid>
 
-            <!-- ===== 汇总卡片 ===== -->
-            <UniformGrid Grid.Row="1" Classes="stat-grid" Margin="0,16,0,0" Rows="1" Columns="4">
-                <Border Grid.Column="0" Classes="card stat0" Margin="0,0,12,0">
-                    <StackPanel Spacing="8">
-                        <TextBlock Text="记录会话" Classes="card-title" />
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <TextBlock Text="{Binding TotalSessions}" Classes="card-value" />
-                            <TextBlock Text="次" FontSize="12" Foreground="{DynamicResource TextSubBrush}" VerticalAlignment="Bottom" Margin="0,0,0,5" />
+            <!-- ===== 主指标卡：Token 消耗大数字 ===== -->
+            <Border Grid.Row="1" Classes="card" Margin="0,16,0,0" Padding="18,16">
+                <StackPanel Spacing="6">
+                    <TextBlock Text="Token 消耗（入 / 出）" Classes="card-title" />
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock Text="{Binding TotalTokensText}" Classes="card-value" />
+                        <TextBlock Text="tokens" FontSize="12" Foreground="{DynamicResource TextSubBrush}"
+                                   VerticalAlignment="Bottom" Margin="0,0,0,5" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding TotalTokensDetail}" Classes="text-caption"
+                               TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+            </Border>
+
+            <!-- ===== 副指标：记录会话 / 积分消耗 / 缓存命中 ===== -->
+            <UniformGrid Grid.Row="2" Margin="0,12,0,0" Rows="1" Columns="3">
+                <Border Grid.Column="0" Classes="stat-chip" Margin="0,0,10,0">
+                    <StackPanel Spacing="6">
+                        <Panel>
+                            <Border Classes="stat-icon" Background="{DynamicResource AccentSoftBrush}" HorizontalAlignment="Left">
+                                <PathIcon Width="14" Height="14" Foreground="{DynamicResource AccentBrush}"
+                                          Data="M4 4h16v12H8l-4 4z" />
+                            </Border>
+                        </Panel>
+                        <TextBlock Text="记录会话" Classes="text-caption" />
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                            <TextBlock Text="{Binding TotalSessions}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextMainBrush}" />
+                            <TextBlock Text="次" FontSize="11" Foreground="{DynamicResource TextSubBrush}" VerticalAlignment="Bottom" Margin="0,0,0,3" />
                         </StackPanel>
                     </StackPanel>
                 </Border>
-                <Border Grid.Column="1" Classes="card stat1" Margin="12,0">
-                    <StackPanel Spacing="8">
-                        <TextBlock Text="积分消耗" Classes="card-title" />
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <TextBlock Text="{Binding TotalCreditsText}" Classes="card-value" Foreground="{DynamicResource WarningBrush}" />
-                            <TextBlock Text="分" FontSize="12" Foreground="{DynamicResource TextSubBrush}" VerticalAlignment="Bottom" Margin="0,0,0,5" />
+                <Border Grid.Column="1" Classes="stat-chip" Margin="10,0">
+                    <StackPanel Spacing="6">
+                        <Panel>
+                            <Border Classes="stat-icon" Background="{DynamicResource WarningSoftBrush}" HorizontalAlignment="Left">
+                                <PathIcon Width="14" Height="14" Foreground="{DynamicResource WarningBrush}"
+                                          Data="M12 3 5 10l7 11 7-11z" />
+                            </Border>
+                        </Panel>
+                        <TextBlock Text="积分消耗" Classes="text-caption" />
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                            <TextBlock Text="{Binding TotalCreditsText}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource WarningBrush}" />
+                            <TextBlock Text="分" FontSize="11" Foreground="{DynamicResource TextSubBrush}" VerticalAlignment="Bottom" Margin="0,0,0,3" />
                         </StackPanel>
                     </StackPanel>
                 </Border>
-                <Border Grid.Column="2" Classes="card stat2" Margin="12,0">
-                    <StackPanel Spacing="8">
-                        <TextBlock Text="Token（入/出）" Classes="card-title" />
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <TextBlock Text="{Binding TotalTokensText}" Classes="card-value" FontSize="24" Foreground="{DynamicResource AccentBrush}" />
-                            <TextBlock Text="tokens" FontSize="11" Foreground="{DynamicResource TextSubBrush}" VerticalAlignment="Bottom" Margin="0,0,0,5" />
-                        </StackPanel>
-                        <TextBlock Text="{Binding TotalTokensDetail}" Classes="text-caption"
-                                   TextTrimming="CharacterEllipsis" />
-                    </StackPanel>
-                </Border>
-                <Border Grid.Column="3" Classes="card stat3" Margin="12,0,0,0">
-                    <StackPanel Spacing="8">
-                        <TextBlock Text="缓存命中" Classes="card-title" />
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <TextBlock Text="{Binding CacheHitText}" Classes="card-value" Foreground="{DynamicResource SuccessBrush}" />
-                            <TextBlock Text="{Binding CacheHitRate, StringFormat={}{0:0}%}" Classes="card-value" FontSize="14" Foreground="{DynamicResource SuccessBrush}" VerticalAlignment="Bottom" Margin="0,0,0,5" />
+                <Border Grid.Column="2" Classes="stat-chip" Margin="10,0,0,0">
+                    <StackPanel Spacing="6">
+                        <Panel>
+                            <Border Classes="stat-icon" Background="{DynamicResource SuccessSoftBrush}" HorizontalAlignment="Left">
+                                <PathIcon Width="14" Height="14" Foreground="{DynamicResource SuccessBrush}"
+                                          Data="M11 3 5 14h5l-1 7 7-11h-5z" />
+                            </Border>
+                        </Panel>
+                        <TextBlock Text="缓存命中" Classes="text-caption" />
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                            <TextBlock Text="{Binding CacheHitText}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource SuccessBrush}" />
+                            <TextBlock Text="{Binding CacheHitRate, StringFormat={}{0:0}%}" FontSize="12" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource SuccessBrush}" VerticalAlignment="Bottom" Margin="0,0,0,3" />
                         </StackPanel>
                     </StackPanel>
                 </Border>
             </UniformGrid>
 
             <!-- ===== 积分快过期提醒 ===== -->
-            <Border Grid.Row="2" Classes="card" IsVisible="{Binding HasExpiring}" Margin="0,16,0,0" Padding="20,16">
+            <Border Grid.Row="3" Classes="card" IsVisible="{Binding HasExpiring}" Margin="0,12,0,0" Padding="18,14">
                 <StackPanel Spacing="10">
                     <Grid ColumnDefinitions="*,Auto">
                         <TextBlock Grid.Column="0" Text="积分快过期提醒" Classes="card-title" />
@@ -105,7 +138,7 @@
             </Border>
 
             <!-- ===== 会话列表 + 模型分布（占满剩余高度，内部各自滚动） ===== -->
-            <UniformGrid Grid.Row="3" Classes="stack2" Margin="0,16,0,0" Rows="1" Columns="2">
+            <UniformGrid Grid.Row="4" Classes="stack2" Margin="0,12,0,0" Rows="1" Columns="2">
                 <!-- 会话列表 -->
                 <Border Grid.Column="0" Classes="card stack-first" Margin="0,0,12,0">
                     <Grid RowDefinitions="Auto,*">
@@ -113,14 +146,20 @@
                             <TextBlock Grid.Column="0" Text="逐会话用量" Classes="card-title" />
                             <TextBlock Grid.Column="1" Text="最多展示 500 条，汇总按全部" Classes="text-caption" />
                         </Grid>
+                        <!-- 空状态：浅灰引导文案（不用大空卡） -->
+                        <TextBlock Grid.Row="1" IsVisible="{Binding HasNoSessions}" Classes="text-caption"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,16"
+                                   TextAlignment="Center" TextWrapping="Wrap"
+                                   Text="暂无会话数据&#x0a;点击右上角「拉取用量」开始统计" />
                         <ListBox Grid.Row="1" ItemsSource="{Binding Sessions}" Background="Transparent"
                                  Focusable="False" Margin="0,8,0,0"
-                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                 IsVisible="{Binding !HasNoSessions}">
                             <ListBox.Styles>
                                 <Style Selector="ListBoxItem">
                                     <Setter Property="Padding" Value="0" />
                                     <Setter Property="Margin" Value="0,3" />
-                                    <Setter Property="CornerRadius" Value="12" />
+                                    <Setter Property="CornerRadius" Value="8" />
                                     <Setter Property="Background" Value="Transparent" />
                                 </Style>
                                 <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter">
@@ -164,7 +203,11 @@
                 <Border Grid.Column="1" Classes="card stack-second" Margin="12,0,0,0">
                     <Grid RowDefinitions="Auto,*">
                         <TextBlock Grid.Row="0" Text="模型分布" Classes="card-title" />
-                        <ScrollViewer Grid.Row="1" Margin="0,8,0,0" HorizontalScrollBarVisibility="Disabled">
+                        <TextBlock Grid.Row="1" IsVisible="{Binding HasNoModels}" Classes="text-caption"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,16"
+                                   Text="暂无模型分布数据" />
+                        <ScrollViewer Grid.Row="1" Margin="0,8,0,0" HorizontalScrollBarVisibility="Disabled"
+                                      IsVisible="{Binding !HasNoModels}">
                             <ItemsControl ItemsSource="{Binding ModelStats}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate x:DataType="models:ModelUsageStat">

@@ -59,12 +59,19 @@ public partial class UsageViewModel : ViewModelBase
     public ObservableCollection<UsageSessionRecord> Sessions { get; } = new();
     public ObservableCollection<ModelUsageStat> ModelStats { get; } = new();
 
+    /// <summary>会话/模型分布是否为空：驱动列表区轻量空提示（不显示大空卡）。</summary>
+    public bool HasNoSessions => Sessions.Count == 0;
+    public bool HasNoModels => ModelStats.Count == 0;
+
     private const int MaxSessionsShown = 500;   // 列表展示上限（汇总仍按全量）
     private const int FetchDays = 7;
     private const int ExpireWarnDays = 7;       // 提前多少天提醒积分过期
 
     public UsageViewModel()
     {
+        // 集合增删时刷新空状态标记
+        Sessions.CollectionChanged += (_, __) => OnPropertyChanged(nameof(HasNoSessions));
+        ModelStats.CollectionChanged += (_, __) => OnPropertyChanged(nameof(HasNoModels));
         Reload();
     }
 

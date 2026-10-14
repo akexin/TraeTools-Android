@@ -39,6 +39,18 @@
         <Style Selector="Button.tab-item.tab-active:pointerover /template/ ContentPresenter">
             <Setter Property="Background" Value="Transparent" />
         </Style>
+        <!-- 选中态图标轻微放大，强化激活反馈 -->
+        <Style Selector="Button.tab-item PathIcon">
+            <Setter Property="RenderTransform" Value="none" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.15" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.tab-item.tab-active PathIcon">
+            <Setter Property="RenderTransform" Value="scale(1.12)" />
+        </Style>
 
         <!-- ===== 紧凑模式覆盖样式（仅 IsCompact=true 时生效，作用于整个页面子树） ===== -->
         <!-- 内容区边距收紧 -->
@@ -67,23 +79,6 @@
         </Style>
         <Style Selector="Grid.compact Border.stack-second">
             <Setter Property="Margin" Value="0,16,0,0" />
-        </Style>
-        <!-- 用量页：4 张汇总卡 2x2 排布 -->
-        <Style Selector="Grid.compact UniformGrid.stat-grid">
-            <Setter Property="Rows" Value="2" />
-            <Setter Property="Columns" Value="2" />
-        </Style>
-        <Style Selector="Grid.compact Border.stat0">
-            <Setter Property="Margin" Value="0,0,10,0" />
-        </Style>
-        <Style Selector="Grid.compact Border.stat1">
-            <Setter Property="Margin" Value="10,0,0,0" />
-        </Style>
-        <Style Selector="Grid.compact Border.stat2">
-            <Setter Property="Margin" Value="0,12,10,0" />
-        </Style>
-        <Style Selector="Grid.compact Border.stat3">
-            <Setter Property="Margin" Value="10,12,0,0" />
         </Style>
     </UserControl.Styles>
 
@@ -263,7 +258,7 @@
             <Border Background="#88000000" />
             <Border HorizontalAlignment="Stretch" VerticalAlignment="Center"
                     Margin="20,0" MaxWidth="620"
-                    Background="{DynamicResource CardBgBrush}" CornerRadius="16"
+                    Background="{DynamicResource CardBgBrush}" CornerRadius="12"
                     BorderBrush="{DynamicResource BorderBrushKey}" BorderThickness="1"
                     ClipToBounds="True">
                 <ScrollViewer MaxHeight="620">
