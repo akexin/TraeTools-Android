@@ -51,6 +51,7 @@
                 <StackPanel Grid.Column="0" Spacing="4">
                     <TextBlock Text="仪表盘" Classes="page-title" />
                     <TextBlock Text="{Binding DateText}" Classes="page-subtitle" />
+                    <ProgressBar Classes="loading-bar" IsIndeterminate="True" IsVisible="{Binding IsRefreshing}" />
                     <!-- 当前账号：头像是与"账号管理"一致的真实头像，否则显示首字母兜底 -->
                     <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,10,0,0"
                                 IsVisible="{Binding HasCurrentAccount}">
@@ -74,7 +75,8 @@
                     </StackPanel>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Classes="dash-actions" Orientation="Horizontal" Spacing="10">
-                    <Button Classes="btn" Content="刷新状态" Command="{Binding RefreshStatusCommand}" />
+                    <Button Classes="btn" Content="{Binding RefreshButtonText}" Command="{Binding RefreshStatusCommand}"
+                            IsEnabled="{Binding !IsRefreshing}" />
                     <Button Classes="btn-danger" Content="重新登录" Command="{Binding ReloginCommand}"
                         IsVisible="{Binding NeedLogin}" />
                     <Button Classes="btn-primary" Content="立即签到" Command="{Binding QuickCheckinCommand}"

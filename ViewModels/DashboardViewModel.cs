@@ -50,8 +50,16 @@ public partial class DashboardViewModel : ViewModelBase
     [ObservableProperty]
     private bool _canQuickCheckin = true;
 
+    /// <summary>「刷新状态」进行中：驱动按钮文案与顶部加载条。</summary>
+    [ObservableProperty]
+    private bool _isRefreshing;
+
+    /// <summary>刷新状态按钮文案。</summary>
+    public string RefreshButtonText => IsRefreshing ? "刷新中…" : "刷新状态";
+
     partial void OnCheckinStatusChanged(string value) => UpdateCanQuickCheckin();
     partial void OnIsQuickCheckingChanged(bool value) => UpdateCanQuickCheckin();
+    partial void OnIsRefreshingChanged(bool value) => OnPropertyChanged(nameof(RefreshButtonText));
 
     /// <summary>重新计算「立即签到」可用性：进行中或今日已签到（已完成/今日已签到）则禁用。</summary>
     private void UpdateCanQuickCheckin()
@@ -615,7 +623,10 @@ public partial class DashboardViewModel : ViewModelBase
     [RelayCommand]
     private async Task RefreshStatus()
     {
-        await LoadAsync();
+        if (IsRefreshing) return;   // 防重复点击
+        IsRefreshing = true;
+        try { await LoadAsync(); }
+        finally { IsRefreshing = false; }
     }
 
     /// <summary>重新登录当前激活账号（仪表盘"需重登/未登录"入口）。登录成功后全局刷新。</summary>

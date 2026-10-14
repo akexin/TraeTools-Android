@@ -29,6 +29,11 @@ public partial class UsageViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isLoading;
 
+    /// <summary>拉取按钮文案：进行中显示"拉取中…"。</summary>
+    public string PullButtonText => IsLoading ? "拉取中…" : "拉取用量";
+
+    partial void OnIsLoadingChanged(bool value) => OnPropertyChanged(nameof(PullButtonText));
+
     // ---- 汇总卡片 ----
     [ObservableProperty]
     private int _totalSessions;

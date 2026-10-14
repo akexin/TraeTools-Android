@@ -43,8 +43,9 @@
                     <TextBlock Text="用量统计" Classes="page-title" />
                     <TextBlock Text="{Binding CurrentAccount}" Classes="page-subtitle" />
                     <TextBlock Text="{Binding DataRangeText}" Classes="text-caption" />
+                    <ProgressBar Classes="loading-bar" IsIndeterminate="True" IsVisible="{Binding IsLoading}" />
                 </StackPanel>
-                <Button Grid.Column="1" Classes="btn-primary" Content="拉取用量" Command="{Binding RefreshCommand}"
+                <Button Grid.Column="1" Classes="btn-primary" Content="{Binding PullButtonText}" Command="{Binding RefreshCommand}"
                         IsEnabled="{Binding !IsLoading}" VerticalAlignment="Center" />
             </Grid>
 

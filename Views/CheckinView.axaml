@@ -53,10 +53,11 @@
                 <StackPanel Grid.Column="0" Spacing="4">
                     <TextBlock Text="每日签到" Classes="page-title" />
                     <TextBlock Text="{Binding PageSubtitle}" Classes="page-subtitle" />
+                    <ProgressBar Classes="loading-bar" IsIndeterminate="True" IsVisible="{Binding IsCheckingIn}" />
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
                     <Button Classes="btn-primary" Content="{Binding CheckinButtonText}" Command="{Binding DoCheckinCommand}"
-                            IsEnabled="{Binding !CheckedInToday}" />
+                            IsEnabled="{Binding CanCheckin}" />
                 </StackPanel>
             </Grid>
 

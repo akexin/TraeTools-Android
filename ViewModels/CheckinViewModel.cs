@@ -21,10 +21,28 @@ public partial class CheckinViewModel : ViewModelBase
     [ObservableProperty]
     private bool _checkedInToday;
 
-    /// <summary>一键签到按钮文案：今日已签则显示"今日已签到"。</summary>
-    public string CheckinButtonText => CheckedInToday ? "今日已签到 ✓" : "一键签到";
+    /// <summary>签到进行中：驱动按钮文案、禁用与顶部加载条（兼作防重复提交）。</summary>
+    [ObservableProperty]
+    private bool _isCheckingIn;
 
-    partial void OnCheckedInTodayChanged(bool value) => OnPropertyChanged(nameof(CheckinButtonText));
+    /// <summary>一键签到按钮文案：进行中显示"签到中…"，今日已签显示"今日已签到"。</summary>
+    public string CheckinButtonText
+        => IsCheckingIn ? "签到中…" : (CheckedInToday ? "今日已签到 ✓" : "一键签到");
+
+    /// <summary>签到按钮可用性：已签到或正在签到中均禁用。</summary>
+    public bool CanCheckin => !CheckedInToday && !IsCheckingIn;
+
+    partial void OnCheckedInTodayChanged(bool value)
+    {
+        OnPropertyChanged(nameof(CheckinButtonText));
+        OnPropertyChanged(nameof(CanCheckin));
+    }
+
+    partial void OnIsCheckingInChanged(bool value)
+    {
+        OnPropertyChanged(nameof(CheckinButtonText));
+        OnPropertyChanged(nameof(CanCheckin));
+    }
 
     [ObservableProperty]
     private int _streakDays = 0;
@@ -625,6 +643,8 @@ public partial class CheckinViewModel : ViewModelBase
     [RelayCommand]
     private async Task DoCheckin()
     {
+        if (IsCheckingIn) return;   // 防重复提交
+        IsCheckingIn = true;
         try
         {
             var cfg = MainViewModel.AppConfig;
@@ -674,6 +694,10 @@ public partial class CheckinViewModel : ViewModelBase
         catch (Exception ex)
         {
             StatusMessage = $"签到异常：{ex.Message}";
+        }
+        finally
+        {
+            IsCheckingIn = false;
         }
     }
 }
