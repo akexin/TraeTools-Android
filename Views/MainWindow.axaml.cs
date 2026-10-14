@@ -25,6 +25,8 @@ public partial class MainWindow : Window
     {
 #if !ANDROID
         _notify = new WindowNotificationManager(this) { Position = NotificationPosition.BottomRight, MaxItems = 3 };
+        // 把通知能力交出去，供 Services/Notify/SystemNotifier 复用（它无法自行拿到窗口实例）
+        App.DesktopNotifier = ShowDesktopNotification;
 #endif
         InitializeComponent();
 
@@ -58,12 +60,20 @@ public partial class MainWindow : Window
     protected override void OnClosed(EventArgs e)
     {
 #if !ANDROID
+        // 窗口已销毁，及时摘掉委托，避免 SystemNotifier 调到已失效的 NotificationManager
+        App.DesktopNotifier = null;
         _trayIcon?.Dispose();
 #endif
         base.OnClosed(e);
     }
 
 #if !ANDROID
+    /// <summary>桌面端通知：显示在主窗口右下角，数秒后自动消失。</summary>
+    private void ShowDesktopNotification(string title, string body)
+    {
+        _notify.Show(new Notification(title, body, NotificationType.Information, TimeSpan.FromSeconds(6)));
+    }
+
     /// <summary>关闭窗口默认最小化到托盘（与 TraeCheckin 一致）；仅托盘「退出」真正退出。</summary>
     private void OnWindowClosing(object? sender, WindowClosingEventArgs e)
     {

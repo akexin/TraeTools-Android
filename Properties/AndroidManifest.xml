@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" android:installLocation="auto">
   <uses-permission android:name="android.permission.INTERNET" />
+  <!-- Android 13（API 33）起发送通知需声明并运行时申请此权限；
+       运行时申请见 Platform/MainActivity.cs 的 MainActivity.Current 与
+       Services/Notify/SystemNotifier.cs 的 RequestPermission()。
+       走清单而非 [assembly: UsesPermission] 特性：与本文件既有的 INTERNET 声明保持一致，
+       且不依赖绑定库中特性构造函数的签名。 -->
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
   <application android:label="TraeTools"
                android:icon="@mipmap/ic_launcher"
                android:roundIcon="@mipmap/ic_launcher_round"

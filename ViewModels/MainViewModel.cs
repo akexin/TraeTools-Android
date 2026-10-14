@@ -28,15 +28,134 @@ public partial class MainViewModel : ViewModelBase
 {
     private readonly CheckinViewModel _checkin;
     private readonly SettingsViewModel _settings;
+    private readonly LogViewModel _logs;
 
     /// <summary>单页仪表盘（本地签到 + 云端托管 + 最近记录）。</summary>
     public HomeViewModel Home { get; }
+
+    /// <summary>日志页（最近日志 / 全部日志）。</summary>
+    public LogViewModel Logs => _logs;
 
     [ObservableProperty]
     private ViewModelBase? _currentPage;
 
     [ObservableProperty]
     private string _currentPageKey = "home";
+
+    // ==================== 顶栏账号切换器 ====================
+
+    /// <summary>可切换的账号列表（轻量项，不含头像与在线状态）。</summary>
+    public System.Collections.ObjectModel.ObservableCollection<Models.AccountSwitchItem> SwitchAccounts { get; } = new();
+
+    /// <summary>切换器是否展开。</summary>
+    [ObservableProperty]
+    private bool _isAccountSwitcherOpen;
+
+    /// <summary>顶栏显示的当前账号名。</summary>
+    [ObservableProperty]
+    private string _currentAccountName = "未登录";
+
+    /// <summary>顶栏账号头像占位字符（当前账号名首字）。</summary>
+    [ObservableProperty]
+    private string _currentAccountInitial = "?";
+
+    /// <summary>账号数大于 1 时才有切换的必要。</summary>
+    [ObservableProperty]
+    private bool _canSwitchAccount;
+
+    /// <summary>点击顶栏账号区：展开/收起切换器（无账号时不展开）。</summary>
+    [RelayCommand]
+    private void ToggleAccountSwitcher()
+    {
+        if (!CanSwitchAccount)
+        {
+            // 只有一个账号时点击无意义，直接进设置页的账号管理更实用
+            Navigate("settings");
+            return;
+        }
+        RefreshSwitchAccounts();
+        IsAccountSwitcherOpen = !IsAccountSwitcherOpen;
+    }
+
+    /// <summary>把某个账号设为当前激活账号：签到引擎、仪表盘、云端状态与设置页同步刷新。</summary>
+    [RelayCommand]
+    private void SwitchAccount(string? id)
+    {
+        if (string.IsNullOrEmpty(id)) return;
+        var cfg = AppConfig;
+        if (cfg == null) return;
+        if (!cfg.Accounts.Any(a => a.Id == id))
+        {
+            IsAccountSwitcherOpen = false;
+            return;
+        }
+
+        try
+        {
+            if (cfg.ActiveAccountId != id)
+            {
+                cfg.ActiveAccountId = id;
+                cfg.Save();
+                var name = DisplayNameOf(cfg.Accounts.First(a => a.Id == id));
+                AccountHelpers.AppLog("account", name, "切换当前账号");
+            }
+        }
+        catch { /* 保存失败也继续刷新界面 */ }
+
+        IsAccountSwitcherOpen = false;
+        RefreshSwitchAccounts();
+        // 复用既有通知链路：重载签到引擎 + 刷新单页与设置页账号状态
+        NotifyActiveAccountChanged();
+    }
+
+    /// <summary>重建顶栏切换器列表与当前账号文案。</summary>
+    public void RefreshSwitchAccounts()
+    {
+        try
+        {
+            var cfg = AppConfig;
+            SwitchAccounts.Clear();
+            if (cfg == null || cfg.Accounts.Count == 0)
+            {
+                CurrentAccountName = "未登录";
+                CurrentAccountInitial = "?";
+                CanSwitchAccount = false;
+                return;
+            }
+
+            var active = cfg.Accounts.FirstOrDefault(a => a.Id == cfg.ActiveAccountId) ?? cfg.Accounts[0];
+            CurrentAccountName = DisplayNameOf(active);
+            CurrentAccountInitial = CurrentAccountName.Length > 0 ? CurrentAccountName[0].ToString() : "?";
+            CanSwitchAccount = cfg.Accounts.Count > 1;
+
+            foreach (var a in cfg.Accounts)
+            {
+                var display = DisplayNameOf(a);
+                var accId = a.Id;
+                SwitchAccounts.Add(new Models.AccountSwitchItem
+                {
+                    Id = accId,
+                    Display = display,
+                    Subtitle = string.IsNullOrEmpty(a.MobileMasked) ? "" : a.MobileMasked!,
+                    Initial = display.Length > 0 ? display[0].ToString() : "?",
+                    IsCurrent = a.Id == active.Id,
+                    CheckedInToday = a.LastCheckinDate.HasValue && a.LastCheckinDate.Value.Date == DateTime.Today,
+                    // 每个列表项携带自己的切换命令（闭包捕获账号 Id），避免模板里跨层级绑定父 VM
+                    SelectCommand = new RelayCommand(() => SwitchAccount(accId)),
+                });
+            }
+        }
+        catch { /* 列表构建失败保留原值 */ }
+    }
+
+    /// <summary>账号展示名：备注名 → 平台昵称 → 脱敏手机号 → 短 Id。</summary>
+    private static string DisplayNameOf(TraeCheckin.TraeAccount a)
+    {
+        if (!string.IsNullOrWhiteSpace(a.Name)) return a.Name!;
+        if (!string.IsNullOrWhiteSpace(a.ScreenName)) return a.ScreenName!;
+        if (!string.IsNullOrWhiteSpace(a.MobileMasked)) return a.MobileMasked!;
+        return a.Id.Length > 6 ? a.Id[..6] : a.Id;
+    }
 
     /// <summary>
     /// 紧凑模式（手机屏适配）：宿主宽度 &lt; 640 逻辑像素时由 MainView 按实际 Bounds 切换。
@@ -121,14 +240,20 @@ public partial class MainViewModel : ViewModelBase
 
         Instance = this;
 
+        // 把今天已落盘的日志回填进内存缓冲：进程重启后「最近日志」不至于是一片空白
+        try { TraeTools.Services.AppLog.SeedFromTodayFiles(); } catch { /* 回填失败不影响功能 */ }
+
         // 引擎实例只创建一份：定时自动签到与页面按钮必须共享同一状态
         _checkin = new CheckinViewModel();
         var cloud = new CloudViewModel();
         _settings = new SettingsViewModel();
+        _logs = new LogViewModel();
 
         Home = new HomeViewModel(_checkin, cloud);
 
         _settings.NavigateRequested += p => Navigate(p);
+
+        RefreshSwitchAccounts();
 
         CurrentPage = Home;
         CurrentPageKey = "home";
@@ -152,11 +277,19 @@ public partial class MainViewModel : ViewModelBase
 
     public bool IsHomeActive => CurrentPageKey == "home";
     public bool IsSettingsActive => CurrentPageKey == "settings";
+    public bool IsLogsActive => CurrentPageKey == "logs";
+
+    /// <summary>是否处于任一二级页（设置 / 日志）：决定顶栏显示「返回」还是各入口图标。</summary>
+    public bool IsSubPageActive => IsSettingsActive || IsLogsActive;
 
     partial void OnCurrentPageKeyChanged(string value)
     {
         OnPropertyChanged(nameof(IsHomeActive));
         OnPropertyChanged(nameof(IsSettingsActive));
+        OnPropertyChanged(nameof(IsLogsActive));
+        OnPropertyChanged(nameof(IsSubPageActive));
+        // 切换器在离开首页时收起，避免残留展开态
+        if (value != "home") IsAccountSwitcherOpen = false;
     }
 
     /// <summary>账号管理切换激活账号后：签到引擎重载 + 单页日志与状态同步。</summary>
@@ -167,6 +300,7 @@ public partial class MainViewModel : ViewModelBase
         {
             vm._checkin.Reload();
             vm.Home.Refresh();
+            vm.RefreshSwitchAccounts();
             await vm._settings.RefreshAccountStatesAsync();
         }
         catch { /* 异步刷新失败不应导致崩溃 */ }
@@ -217,11 +351,12 @@ public partial class MainViewModel : ViewModelBase
             }
             acc.LastCheckinDate = DateTime.Now;
             cfg.LastCheckinDate = DateTime.Now;
+            double gained = 0;
             try
             {
                 // 解析本次所得并写入签到历史（与签到页/自动签到同口径）
                 var after = await api.GetStatusAsync(acc.Token, acc.DeviceId);
-                double gained = TraeCheckin.CheckinEvaluator.ResolveGainedCredits(after ?? result, acc.IsMember);
+                gained = TraeCheckin.CheckinEvaluator.ResolveGainedCredits(after ?? result, acc.IsMember);
                 AccountHelpers.AppendHistory(acc, gained);
                 AccountHelpers.CheckinLog(name, $"[托盘快签] 签到成功，获得 {gained} 积分");
             }
@@ -238,6 +373,16 @@ public partial class MainViewModel : ViewModelBase
             catch { /* 积分刷新失败不影响签到结果 */ }
             try { cfg.Save(); } catch { /* 忽略 */ }
             Home.RefreshLogs();
+            // 托盘快签同样走统一推送管道（受设置页各渠道开关与总开关约束）
+            try
+            {
+                await TraeTools.Services.Notify.NotifyDispatcher.SendCheckinBatchAsync(
+                    cfg, new List<(string Name, bool Ok, double Gained, string Reason)>
+                    {
+                        (name, true, gained, ""),
+                    });
+            }
+            catch { /* 推送失败不影响签到结果 */ }
             return true;
         }
         catch
@@ -247,7 +392,7 @@ public partial class MainViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// 导航：重构后仅有两个目的地——首页（单页仪表盘）与设置（二级页）。
+    /// 导航：三个目的地——首页（单页仪表盘）、设置（二级页）、日志（二级页）。
     /// 其余页面（仪表盘/用量/签到/切换/云端）已从产品移除。
     /// </summary>
     [RelayCommand]
@@ -260,8 +405,16 @@ public partial class MainViewModel : ViewModelBase
                 CurrentPage = _settings;
                 CurrentPageKey = "settings";
                 break;
+            case "logs":
+                _logs.Subscribe();
+                _logs.ReloadRecent();
+                _logs.RefreshFiles();
+                CurrentPage = _logs;
+                CurrentPageKey = "logs";
+                break;
             default:
                 Home.Refresh();     // 每次回到首页都按当前账号真实验证刷新
+                RefreshSwitchAccounts();
                 CurrentPage = Home;
                 CurrentPageKey = "home";
                 break;

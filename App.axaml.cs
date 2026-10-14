@@ -18,15 +18,42 @@ public partial class App : Avalonia.Application
     public static TrayIcon? TrayRef;
 
     /// <summary>
-    /// 应用全局主题（亮/暗）：切换 RequestedThemeVariant，AppTheme.axaml 中
-    /// ThemeDictionaries 内的令牌随之整体切换；设置页深色模式开关实时调用。
+    /// 桌面端「系统本地通知」入口，由 MainWindow 在构造时挂上、关闭时摘掉。
+    ///
+    /// 为什么不直接调 TrayIcon：Avalonia 12 的 TrayIcon **没有** ShowNotification 方法
+    /// （该方法在 0.10 之后已移除），桌面通知统一走 WindowNotificationManager，
+    /// 它绑定在具体窗口上，因此必须由 MainWindow 提供实例。
+    /// 参数为 (标题, 正文)。Android 端不使用此委托（走原生通知栏）。
     /// </summary>
-    public static void ApplyTheme(bool dark)
+    public static System.Action<string, string>? DesktopNotifier;
+
+    /// <summary>
+    /// 应用全局主题（三态）：ThemeMode 取 "system"（跟随系统）/ "light" / "dark"，
+    /// 切换 RequestedThemeVariant 后 AppTheme.axaml 的 ThemeDictionaries 令牌整体生效。
+    /// 设置页的主题选择与启动时各调用一次。
+    /// </summary>
+    public static void ApplyThemeMode(string? mode)
     {
         var app = Current;
         if (app == null) return;
-        app.RequestedThemeVariant = dark ? ThemeVariant.Dark : ThemeVariant.Light;
+        try
+        {
+            app.RequestedThemeVariant = (mode ?? "system").ToLowerInvariant() switch
+            {
+                "light" => ThemeVariant.Light,
+                "dark" => ThemeVariant.Dark,
+                // ThemeVariant.Default 不是具体配色，而是「交给平台/系统决定」的占位值
+                _ => ThemeVariant.Default,
+            };
+        }
+        catch
+        {
+            // 主题切换失败（极端平台差异）不应影响启动
+        }
     }
+
+    /// <summary>兼容旧调用的布尔重载：true=深色，false=浅色。</summary>
+    public static void ApplyTheme(bool dark) => ApplyThemeMode(dark ? "dark" : "light");
 
     public override void Initialize()
     {
@@ -54,8 +81,8 @@ public partial class App : Avalonia.Application
             {
                 DataContext = new MainViewModel(),
             };
-            // 配置在 MainViewModel 构造时加载：视图显示前应用保存的亮/暗主题偏好
-            ApplyTheme(MainViewModel.AppConfig?.DarkMode ?? false);
+            // 配置在 MainViewModel 构造时加载：视图显示前应用保存的主题偏好（跟随系统/浅色/深色）
+            ApplyThemeMode(MainViewModel.AppConfig?.ThemeMode);
             CrashLog.Boot("App: desktop MainWindow created");
         }
 #if ANDROID
@@ -79,8 +106,8 @@ public partial class App : Avalonia.Application
                 {
                     DataContext = new MainViewModel(),
                 };
-                // 配置在 MainViewModel 构造时加载：视图显示前应用保存的亮/暗主题偏好
-                ApplyTheme(MainViewModel.AppConfig?.DarkMode ?? false);
+                // 配置在 MainViewModel 构造时加载：视图显示前应用保存的主题偏好（跟随系统/浅色/深色）
+                ApplyThemeMode(MainViewModel.AppConfig?.ThemeMode);
                 CrashLog.Boot("App: single-view MainView created");
             }
             catch (System.Exception ex)
@@ -112,7 +139,7 @@ public partial class App : Avalonia.Application
             try
             {
                 lifetime.MainView = new MainView { DataContext = new MainViewModel() };
-                ApplyTheme(MainViewModel.AppConfig?.DarkMode ?? false);
+                ApplyThemeMode(MainViewModel.AppConfig?.ThemeMode);
                 CrashLog.Boot("App: retry create MainView ok");
             }
             catch (System.Exception ex)

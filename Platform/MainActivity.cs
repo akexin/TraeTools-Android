@@ -5,6 +5,10 @@ using Android.Runtime;
 using Avalonia;
 using Avalonia.Android;
 
+// Android 13（API 33）起，发送通知需要 POST_NOTIFICATIONS 权限。
+// 该权限在 Properties/AndroidManifest.xml 中声明（与本项目既有的 INTERNET 声明同一处，
+// 不用 [assembly: UsesPermission] 特性，避免依赖绑定库中特性构造函数的签名）。
+
 namespace TraeTools;
 
 /// <summary>Android 唯一 Activity：承载 Avalonia 单视图生命周期。</summary>
@@ -15,11 +19,18 @@ namespace TraeTools;
     ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.UiMode)]
 public class MainActivity : AvaloniaMainActivity
 {
+    /// <summary>
+    /// 当前 Activity 引用：通知权限申请（RequestPermissions）必须由 Activity 发起，
+    /// 而应用只有这一个 Activity，用静态引用比从 Avalonia 生命周期反查更直接可靠。
+    /// </summary>
+    public static MainActivity? Current { get; private set; }
+
     protected override void OnCreate(Android.OS.Bundle? savedInstanceState)
     {
         try
         {
             base.OnCreate(savedInstanceState);
+            Current = this;
             TraeTools.Platform.CrashLog.Boot("MainActivity.OnCreate completed");
         }
         catch (System.Exception ex)
@@ -28,6 +39,13 @@ public class MainActivity : AvaloniaMainActivity
             TraeTools.Platform.CrashLog.Write("MainActivity.OnCreate", ex, true);
             TraeTools.Platform.CrashReportActivity.Launch(ex.ToString());
         }
+    }
+
+    protected override void OnDestroy()
+    {
+        // 避免持有已销毁的 Activity 造成内存泄漏
+        if (ReferenceEquals(Current, this)) Current = null;
+        base.OnDestroy();
     }
 }
 

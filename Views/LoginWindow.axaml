@@ -1,45 +1,90 @@
 ﻿<UserControl xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="TraeTools.Views.LoginWindow"
-        Width="540" Height="500" MaxWidth="620"
+        Width="560" MaxWidth="620" MaxHeight="620"
         Background="{DynamicResource CardBgBrush}"
         FontFamily="Microsoft YaHei UI,Segoe UI">
     <Grid RowDefinitions="Auto,*,Auto" Background="{DynamicResource CardBgBrush}">
-        <Border Grid.Row="0" Background="#FFF9FAFB" BorderBrush="#FFE2E8F0" BorderThickness="0,0,0,1" Padding="16,14">
-            <TextBlock Text="登录 TRAE 账号" FontSize="15" FontWeight="Bold" Foreground="#FF0F172A" />
+
+        <!-- 标题栏（颜色走主题令牌，深色模式下不再是一块白） -->
+        <Border Grid.Row="0" Background="{DynamicResource RowBgBrush}"
+                BorderBrush="{DynamicResource BorderBrushKey}" BorderThickness="0,0,0,1" Padding="16,14">
+            <TextBlock Text="登录 TRAE 账号" FontSize="15" FontWeight="Bold"
+                       Foreground="{DynamicResource TextMainBrush}" />
         </Border>
 
-        <Border Grid.Row="1" Padding="16,14"><StackPanel Spacing="12">
-            <!-- 内嵌浏览器自动登录（首选；仅 Windows 桌面端可用） -->
-            <TextBlock x:Name="AutoLoginHint" TextWrapping="Wrap" FontSize="12.5" Foreground="#FF0F172A" LineHeight="20">
-推荐：点击下方「自动登录」将弹出内嵌浏览器窗口，登录成功后自动读取凭证，无需手动复制。
-            </TextBlock>
-            <StackPanel Orientation="Horizontal" Spacing="10">
-                <Button x:Name="AutoLoginButton" Content="自动登录（内嵌浏览器）" Click="OnAutoLoginClick" Classes="btn-primary"
-                        HorizontalAlignment="Left" MinWidth="190" Height="40" Padding="16,0"
-                        HorizontalContentAlignment="Center" VerticalContentAlignment="Center" />
-                <TextBlock x:Name="AutoStatus" FontSize="11" Foreground="#FF92400E" VerticalAlignment="Center" />
-            </StackPanel>
+        <Border Grid.Row="1" Padding="16,14">
+            <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                <StackPanel Spacing="12">
 
-            <Border Height="1" Background="#FFE2E8F0" Margin="0,6" />
+                    <!-- ========== 方式一：内嵌浏览器自动登录（仅 Windows 桌面端） ========== -->
+                    <TextBlock x:Name="AutoLoginHint" TextWrapping="Wrap" FontSize="12.5"
+                               Foreground="{DynamicResource TextMainBrush}" LineHeight="20"
+                               Text="方式一 · 自动登录：弹出内嵌浏览器窗口，登录成功后自动读取凭证，无需手动复制。" />
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <Button x:Name="AutoLoginButton" Content="自动登录（内嵌浏览器）" Click="OnAutoLoginClick"
+                                Classes="btn-primary"
+                                HorizontalAlignment="Left" MinWidth="190" Height="40" Padding="16,0"
+                                HorizontalContentAlignment="Center" VerticalContentAlignment="Center" />
+                        <TextBlock x:Name="AutoStatus" FontSize="11" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource StatusWarnFgBrush}" TextWrapping="Wrap" />
+                    </StackPanel>
 
-            <!-- 手动方案（Android 端唯一方式；Windows 端为备选） -->
-            <TextBlock x:Name="ManualHint" TextWrapping="Wrap" FontSize="12" Foreground="#FF64748B" LineHeight="19">
-备选：手动打开浏览器登录后复制 Cloud-IDE-Token 粘贴保存。
-            </TextBlock>
-            <Button Content="打开浏览器登录" Click="OnOpenBrowserClick" Classes="btn"
-                    HorizontalAlignment="Left" MinWidth="160" Height="36" Padding="14,0"
-                    HorizontalContentAlignment="Center" VerticalContentAlignment="Center" />
+                    <Border Height="1" Background="{DynamicResource BorderBrushKey}" Margin="0,6" />
 
-            <TextBlock Text="Cloud-IDE-Token" FontSize="11" Foreground="#FF94A3B8" />
-            <TextBox x:Name="TokenBox" Height="110" AcceptsReturn="True"
-                     PlaceholderText="粘贴 Cloud-IDE-Token…" FontFamily="Consolas" FontSize="11"
-                     ScrollViewer.VerticalScrollBarVisibility="Auto" />
+                    <!-- ========== 方式二：一键导入（剪贴板 / 本机客户端） ========== -->
+                    <TextBlock TextWrapping="Wrap" FontSize="12.5" LineHeight="20"
+                               Foreground="{DynamicResource TextMainBrush}"
+                               Text="方式二 · 一键导入：从剪贴板自动识别凭证类型，或直接读取本机 TRAE 客户端的登录态。" />
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <Button x:Name="ClipboardImportButton" Content="从剪贴板识别" Click="OnClipboardImportClick"
+                                Classes="btn" MinWidth="140" Height="36" Padding="14,0"
+                                HorizontalContentAlignment="Center" VerticalContentAlignment="Center" />
+                        <Button x:Name="LocalImportButton" Content="读取本机客户端" Click="OnLocalImportClick"
+                                Classes="btn" MinWidth="140" Height="36" Padding="14,0"
+                                HorizontalContentAlignment="Center" VerticalContentAlignment="Center" />
+                    </StackPanel>
+                    <TextBlock x:Name="ImportStatus" FontSize="11" TextWrapping="Wrap"
+                               Foreground="{DynamicResource StatusWarnFgBrush}" />
 
-            <TextBlock x:Name="StatusText" FontSize="12" Foreground="#FF92400E" TextWrapping="Wrap" />
-        </StackPanel></Border>
+                    <Border Height="1" Background="{DynamicResource BorderBrushKey}" Margin="0,6" />
 
-        <Border Grid.Row="2" Background="#FFF9FAFB" BorderBrush="#FFE2E8F0" BorderThickness="0,1,0,0" Padding="16,12">
+                    <!-- ========== 方式三：手动粘贴（全平台可用，Android 端主要方式） ========== -->
+                    <TextBlock x:Name="ManualHint" TextWrapping="Wrap" FontSize="12" LineHeight="19"
+                               Foreground="{DynamicResource TextMutedBrush}"
+                               Text="方式三 · 手动粘贴：打开浏览器登录 trae.cn 后，复制 Cloud-IDE-Token 或会话 Cookie 粘贴保存。" />
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <Button Content="打开浏览器登录" Click="OnOpenBrowserClick" Classes="btn"
+                                HorizontalAlignment="Left" MinWidth="150" Height="36" Padding="14,0"
+                                HorizontalContentAlignment="Center" VerticalContentAlignment="Center" />
+                    </StackPanel>
+
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="粘贴内容类型" FontSize="11"
+                                   Foreground="{DynamicResource TextSubBrush}" />
+                        <ComboBox x:Name="MethodCombo" SelectedIndex="0" HorizontalAlignment="Stretch">
+                            <ComboBoxItem Content="自动识别（推荐）" />
+                            <ComboBoxItem Content="Cloud-IDE-Token（JWT）" />
+                            <ComboBoxItem Content="X-Cloudide-Session（会话 Cookie）" />
+                        </ComboBox>
+                    </StackPanel>
+
+                    <TextBlock Text="凭证内容" FontSize="11" Foreground="{DynamicResource TextSubBrush}" />
+                    <TextBox x:Name="TokenBox" Height="104" AcceptsReturn="True"
+                             PlaceholderText="粘贴 Cloud-IDE-Token 或会话 Cookie（可带 X-Cloudide-Session= 外壳，会自动清理）…"
+                             FontFamily="Consolas,Menlo,monospace" FontSize="11"
+                             TextWrapping="Wrap"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto" />
+
+                    <TextBlock x:Name="StatusText" FontSize="12" TextWrapping="Wrap"
+                               Foreground="{DynamicResource StatusWarnFgBrush}" />
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+
+        <!-- 底部按钮条 -->
+        <Border Grid.Row="2" Background="{DynamicResource RowBgBrush}"
+                BorderBrush="{DynamicResource BorderBrushKey}" BorderThickness="0,1,0,0" Padding="16,12">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="12">
                 <Button Content="取消" MinWidth="100" Height="36" Padding="12,0"
                         HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Click="OnCancelClick" />
@@ -49,4 +94,3 @@
         </Border>
     </Grid>
 </UserControl>
-

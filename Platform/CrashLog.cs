@@ -101,6 +101,9 @@ public static class CrashLog
             global::Android.Util.Log.Info("TraeTools", message);
 #endif
             Append($"[BOOT {DateTime.Now:HH:mm:ss.fff}] {message}");
+            // 镜像进统一日志的「最近」缓冲：崩溃/启动轨迹也有自己的落盘文件，
+            // 故此处只进内存不落盘，避免同一事件在两个文件里重复出现
+            TraeTools.Services.AppLog.Mirror(TraeTools.Services.LogLevel.Info, "boot", message);
         }
         catch { /* 日志失败不影响主流程 */ }
     }
@@ -118,6 +121,9 @@ public static class CrashLog
 #endif
             Append(sb.ToString());
             MarkCrashed(ex);
+            TraeTools.Services.AppLog.Mirror(
+                terminating ? TraeTools.Services.LogLevel.Error : TraeTools.Services.LogLevel.Warn,
+                "crash", $"[{source}] {(ex?.Message ?? "(非异常对象)")}");
         }
         catch { /* 忽略 */ }
     }

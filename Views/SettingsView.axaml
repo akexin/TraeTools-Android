@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:TraeTools.ViewModels"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -36,7 +36,7 @@
                 <Grid ColumnDefinitions="*,Auto">
                     <StackPanel Grid.Column="0" Spacing="4">
                         <TextBlock Text="设置" Classes="page-title" />
-                        <TextBlock Text="外观 · 自动化 · Token · 推送 · 账号管理" Classes="page-subtitle" />
+                        <TextBlock Text="外观 · 自动化 · Token · 推送 · 账号" Classes="page-subtitle" />
                     </StackPanel>
                     <Button Grid.Column="1" Classes="btn-primary" Content="保存设置" Command="{Binding SaveSettingsCommand}" />
                 </Grid>
@@ -45,13 +45,18 @@
                 <Border Classes="card">
                     <StackPanel Spacing="12">
 
-                        <!-- 深色模式：列表项（不再单独占一张大卡） -->
+                        <!-- 主题模式：跟随系统 / 浅色 / 深色（切换立即生效并自动保存） -->
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Grid.Column="0" Spacing="2" Margin="0,0,12,0">
-                                <TextBlock Text="深色模式" FontSize="13" FontWeight="SemiBold" />
-                                <TextBlock Text="全局暗色主题，切换立即生效并自动保存" Classes="text-caption" TextWrapping="Wrap" />
+                                <TextBlock Text="主题模式" FontSize="13" FontWeight="SemiBold" />
+                                <TextBlock Text="跟随系统可随系统深色模式自动切换配色" Classes="text-caption" TextWrapping="Wrap" />
                             </StackPanel>
-                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding DarkModeEnabled}" OnContent="" OffContent="" />
+                            <ComboBox Grid.Column="1" SelectedIndex="{Binding ThemeModeIndex}" MinWidth="118"
+                                      VerticalAlignment="Center">
+                                <ComboBoxItem Content="跟随系统" />
+                                <ComboBoxItem Content="浅色" />
+                                <ComboBoxItem Content="深色" />
+                            </ComboBox>
                         </Grid>
 
                         <Border Classes="row-sep" />
@@ -68,7 +73,7 @@
                         <StackPanel Spacing="6">
                             <TextBlock Text="签到时间" FontSize="13" FontWeight="SemiBold" />
                             <TextBox Text="{Binding AutoCheckinTime}" MaxWidth="160" HorizontalAlignment="Left"
-                                     Watermark="HH:mm" />
+                                     PlaceholderText="HH:mm" />
                             <TextBlock Text="建议非高峰时段" Classes="text-caption" />
                         </StackPanel>
 
@@ -138,22 +143,199 @@
                     </StackPanel>
                 </Border>
 
-                <!-- ===== 飞书推送 ===== -->
+                <!-- ===== 推送通知 ===== -->
                 <Border Classes="card">
                     <StackPanel Spacing="12">
-                        <TextBlock Text="飞书推送" Classes="card-title" />
-                        <StackPanel Spacing="6">
-                            <TextBlock Text="Webhook 地址" Classes="text-caption" />
-                            <TextBox Text="{Binding FeishuWebhook}" Padding="8,6" FontFamily="Consolas" FontSize="11" />
-                        </StackPanel>
                         <Grid ColumnDefinitions="*,Auto">
                             <StackPanel Grid.Column="0" Spacing="2" Margin="0,0,12,0">
-                                <TextBlock Text="推送状态" FontSize="13" FontWeight="SemiBold" />
-                                <TextBlock Text="启用后每日签到结果会推送到飞书" Classes="text-caption" TextWrapping="Wrap" />
+                                <TextBlock Text="推送通知" Classes="card-title" />
+                                <TextBlock Text="签到完成后推送到已启用的渠道；各渠道相互独立，任一失败不影响其它" Classes="text-caption" TextWrapping="Wrap" />
                             </StackPanel>
-                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding PushEnabled}" OnContent="" OffContent="" />
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding NotifyOnCheckin}" OnContent="" OffContent=""
+                                          VerticalAlignment="Center" ToolTip.Tip="总开关" />
                         </Grid>
-                        <Button Classes="btn" Content="测试推送" Command="{Binding TestPushCommand}" HorizontalAlignment="Left" />
+
+                        <!-- ===== 飞书 ===== -->
+                        <Expander IsExpanded="False" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                            <Expander.Header>
+                                <TextBlock Text="飞书机器人" FontSize="13" FontWeight="SemiBold" />
+                            </Expander.Header>
+                            <StackPanel Spacing="8" Margin="0,4,0,8">
+                                <TextBlock Text="Webhook 地址" Classes="text-caption" />
+                                <TextBox Text="{Binding FeishuWebhook}" Padding="8,6" FontFamily="Consolas,Menlo,monospace" FontSize="11"
+                                         PlaceholderText="https://open.feishu.cn/open-apis/bot/v2/hook/…" />
+                                <TextBlock Text="在飞书群中添加「自定义机器人」后复制其 Webhook 地址填入。" Classes="text-caption" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Expander>
+
+                        <Border Classes="row-sep" Margin="0,0" />
+
+                        <!-- ===== 邮箱 SMTP ===== -->
+                        <Expander IsExpanded="False" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                            <Expander.Header>
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBlock Grid.Column="0" Text="邮箱推送（自定义 SMTP）" FontSize="13" FontWeight="SemiBold" />
+                                    <ToggleSwitch Grid.Column="1" IsChecked="{Binding EmailEnabled}" OnContent="" OffContent="" />
+                                </Grid>
+                            </Expander.Header>
+                            <StackPanel Spacing="8" Margin="0,4,0,8">
+                                <Grid ColumnDefinitions="*,110">
+                                    <StackPanel Grid.Column="0" Spacing="4" Margin="0,0,10,0">
+                                        <TextBlock Text="SMTP 服务器" Classes="text-caption" />
+                                        <TextBox Text="{Binding SmtpHost}" FontFamily="Consolas,Menlo,monospace" FontSize="11"
+                                                 PlaceholderText="smtp.qq.com" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Spacing="4">
+                                        <TextBlock Text="端口" Classes="text-caption" />
+                                        <TextBox Text="{Binding SmtpPort}" />
+                                    </StackPanel>
+                                </Grid>
+
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="连接加密方式" Classes="text-caption" />
+                                    <ComboBox SelectedIndex="{Binding SmtpSecurityIndex}" HorizontalAlignment="Stretch">
+                                        <ComboBoxItem Content="SSL / TLS（隐式，465）" />
+                                        <ComboBoxItem Content="STARTTLS（587）" />
+                                        <ComboBoxItem Content="不加密（25）" />
+                                    </ComboBox>
+                                </StackPanel>
+
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="用户名（通常是邮箱地址）" Classes="text-caption" />
+                                    <TextBox Text="{Binding SmtpUser}" FontFamily="Consolas,Menlo,monospace" FontSize="11" />
+                                </StackPanel>
+
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="密码 / 授权码" Classes="text-caption" />
+                                    <TextBox Text="{Binding SmtpPassword}" PasswordChar="●" FontFamily="Consolas,Menlo,monospace" FontSize="11" />
+                                    <TextBlock Text="多数邮箱服务商需使用「SMTP 授权码」而非登录密码，请到邮箱设置中开启 SMTP 服务并获取授权码。"
+                                               Classes="text-caption" TextWrapping="Wrap" />
+                                </StackPanel>
+
+                                <Grid ColumnDefinitions="*,*">
+                                    <StackPanel Grid.Column="0" Spacing="4" Margin="0,0,10,0">
+                                        <TextBlock Text="发件人（留空用用户名）" Classes="text-caption" />
+                                        <TextBox Text="{Binding SmtpFrom}" FontFamily="Consolas,Menlo,monospace" FontSize="11" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Spacing="4">
+                                        <TextBlock Text="收件人（多个用逗号分隔）" Classes="text-caption" />
+                                        <TextBox Text="{Binding SmtpTo}" FontFamily="Consolas,Menlo,monospace" FontSize="11" />
+                                    </StackPanel>
+                                </Grid>
+
+                                <Button Classes="btn" Content="发送测试邮件" Command="{Binding TestEmailCommand}"
+                                        HorizontalAlignment="Left" Padding="12,6" FontSize="12" />
+                            </StackPanel>
+                        </Expander>
+
+                        <Border Classes="row-sep" Margin="0,0" />
+
+                        <!-- ===== 通用 Webhook ===== -->
+                        <Expander IsExpanded="False" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                            <Expander.Header>
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBlock Grid.Column="0" Text="通用 Webhook" FontSize="13" FontWeight="SemiBold" />
+                                    <ToggleSwitch Grid.Column="1" IsChecked="{Binding WebhookEnabled}" OnContent="" OffContent="" />
+                                </Grid>
+                            </Expander.Header>
+                            <StackPanel Spacing="8" Margin="0,4,0,8">
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="目标地址" Classes="text-caption" />
+                                    <TextBox Text="{Binding WebhookUrl}" FontFamily="Consolas,Menlo,monospace" FontSize="11"
+                                             PlaceholderText="https://…" />
+                                </StackPanel>
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="请求体模板（{title} 与 {content} 为占位符）" Classes="text-caption" />
+                                    <TextBox Text="{Binding WebhookBodyTemplate}" AcceptsReturn="True" Height="64"
+                                             TextWrapping="Wrap" FontFamily="Consolas,Menlo,monospace" FontSize="11" />
+                                </StackPanel>
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="Content-Type" Classes="text-caption" />
+                                    <TextBox Text="{Binding WebhookContentType}" FontFamily="Consolas,Menlo,monospace" FontSize="11" />
+                                </StackPanel>
+                                <TextBlock Text="示例：Server 酱填 {&quot;title&quot;:&quot;{title}&quot;,&quot;desp&quot;:&quot;{content}&quot;}；Bark 填 {&quot;title&quot;:&quot;{title}&quot;,&quot;body&quot;:&quot;{content}&quot;}。"
+                                           Classes="text-caption" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Expander>
+
+                        <Border Classes="row-sep" Margin="0,0" />
+
+                        <!-- ===== 钉钉 ===== -->
+                        <Expander IsExpanded="False" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                            <Expander.Header>
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBlock Grid.Column="0" Text="钉钉群机器人" FontSize="13" FontWeight="SemiBold" />
+                                    <ToggleSwitch Grid.Column="1" IsChecked="{Binding DingTalkEnabled}" OnContent="" OffContent="" />
+                                </Grid>
+                            </Expander.Header>
+                            <StackPanel Spacing="8" Margin="0,4,0,8">
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="Webhook 地址" Classes="text-caption" />
+                                    <TextBox Text="{Binding DingTalkWebhook}" FontFamily="Consolas,Menlo,monospace" FontSize="11"
+                                             PlaceholderText="https://oapi.dingtalk.com/robot/send?access_token=…" />
+                                </StackPanel>
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="加签密钥（可选；机器人安全设置选「加签」时填写）" Classes="text-caption" />
+                                    <TextBox Text="{Binding DingTalkSecret}" PasswordChar="●" FontFamily="Consolas,Menlo,monospace" FontSize="11" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Expander>
+
+                        <Border Classes="row-sep" Margin="0,0" />
+
+                        <!-- ===== 企业微信 ===== -->
+                        <Expander IsExpanded="False" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                            <Expander.Header>
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBlock Grid.Column="0" Text="企业微信群机器人" FontSize="13" FontWeight="SemiBold" />
+                                    <ToggleSwitch Grid.Column="1" IsChecked="{Binding WeComEnabled}" OnContent="" OffContent="" />
+                                </Grid>
+                            </Expander.Header>
+                            <StackPanel Spacing="8" Margin="0,4,0,8">
+                                <TextBlock Text="Webhook 地址" Classes="text-caption" />
+                                <TextBox Text="{Binding WeComWebhook}" FontFamily="Consolas,Menlo,monospace" FontSize="11"
+                                         PlaceholderText="https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=…" />
+                            </StackPanel>
+                        </Expander>
+
+                        <Border Classes="row-sep" Margin="0,0" />
+
+                        <!-- ===== Telegram ===== -->
+                        <Expander IsExpanded="False" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                            <Expander.Header>
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBlock Grid.Column="0" Text="Telegram Bot" FontSize="13" FontWeight="SemiBold" />
+                                    <ToggleSwitch Grid.Column="1" IsChecked="{Binding TelegramEnabled}" OnContent="" OffContent="" />
+                                </Grid>
+                            </Expander.Header>
+                            <StackPanel Spacing="8" Margin="0,4,0,8">
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="Bot Token" Classes="text-caption" />
+                                    <TextBox Text="{Binding TelegramBotToken}" PasswordChar="●" FontFamily="Consolas,Menlo,monospace" FontSize="11" />
+                                </StackPanel>
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="Chat ID" Classes="text-caption" />
+                                    <TextBox Text="{Binding TelegramChatId}" FontFamily="Consolas,Menlo,monospace" FontSize="11"
+                                             PlaceholderText="私聊为数字 ID，群为负数" />
+                                </StackPanel>
+                                <TextBlock Text="注意：api.telegram.org 在国内网络通常无法直连，需要自备代理，否则会提示请求失败。"
+                                           Classes="text-caption" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Expander>
+
+                        <Border Classes="row-sep" Margin="0,0" />
+
+                        <!-- ===== 系统本地通知 ===== -->
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Grid.Column="0" Spacing="2" Margin="0,0,12,0">
+                                <TextBlock Text="系统本地通知" FontSize="13" FontWeight="SemiBold" />
+                                <TextBlock Text="Windows 通知中心 / Android 通知栏；仅在软件运行时有效" Classes="text-caption" TextWrapping="Wrap" />
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding NotifySystemEnabled}" OnContent="" OffContent="" />
+                        </Grid>
+
+                        <Button Classes="btn" Content="测试全部已启用渠道" Command="{Binding TestNotifyAllCommand}"
+                                HorizontalAlignment="Left" Padding="14,6" FontSize="12" />
                     </StackPanel>
                 </Border>
 
@@ -161,8 +343,11 @@
                 <Border Classes="card">
                     <StackPanel Spacing="12">
                         <Grid ColumnDefinitions="*,Auto">
-                            <TextBlock Grid.Column="0" Text="账号管理" Classes="card-title" VerticalAlignment="Center" />
-                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                            <StackPanel Grid.Column="0" Spacing="2">
+                                <TextBlock Grid.Column="0" Text="账号管理" Classes="card-title" />
+                                <TextBlock Text="点击账号即切换为当前账号（首页与签到随之切换）" Classes="text-caption" TextWrapping="Wrap" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                                 <Button Classes="btn" Content="删除选中" Command="{Binding DeleteAccountCommand}" Padding="12,5"
                                         IsVisible="{Binding !HasNoAccounts}" />
                                 <Button Classes="btn-primary" Content="+ 添加" Command="{Binding AddAccountCommand}" Padding="12,5" />
@@ -238,6 +423,44 @@
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
                         </ListBox>
+                    </StackPanel>
+                </Border>
+
+                <!-- ===== 账号备份（导出 / 导入） ===== -->
+                <Border Classes="card">
+                    <StackPanel Spacing="12">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="账号备份" Classes="card-title" />
+                            <TextBlock Text="导出为口令加密的备份文件，可在另一台设备导入，解决手机与电脑账号不互通的问题"
+                                       Classes="text-caption" TextWrapping="Wrap" />
+                        </StackPanel>
+
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="备份口令（至少 6 位，导出与导入需一致）" Classes="text-caption" />
+                            <TextBox Text="{Binding BackupPassphrase}" PasswordChar="●" MaxWidth="320"
+                                     HorizontalAlignment="Left" FontFamily="Consolas,Menlo,monospace" FontSize="11" />
+                            <TextBlock Text="口令仅用于本次加解密，不会写入配置；口令遗失将无法恢复备份内容。"
+                                       Classes="text-caption" TextWrapping="Wrap" />
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button Classes="btn-primary" Content="导出备份" Command="{Binding ExportAccountsCommand}"
+                                    Padding="14,6" FontSize="12" IsEnabled="{Binding !BackupBusy}" />
+                            <Button Classes="btn" Content="选择备份文件" Command="{Binding PickBackupFileCommand}"
+                                    Padding="14,6" FontSize="12" IsEnabled="{Binding !BackupBusy}" />
+                            <Button Classes="btn" Content="导入账号" Command="{Binding ImportAccountsCommand}"
+                                    Padding="14,6" FontSize="12" IsEnabled="{Binding !BackupBusy}" />
+                        </StackPanel>
+
+                        <Expander IsExpanded="False" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                            <Expander.Header>
+                                <TextBlock Text="备份内容（导出结果 / 手动粘贴导入）" Classes="text-caption" />
+                            </Expander.Header>
+                            <TextBox Text="{Binding BackupText}" AcceptsReturn="True" Height="120"
+                                     TextWrapping="Wrap" FontFamily="Consolas,Menlo,monospace" FontSize="10.5"
+                                     Margin="0,4,0,8"
+                                     PlaceholderText="导出后内容会出现在这里；也可把别处得到的备份内容粘贴到这里再点「导入账号」" />
+                        </Expander>
                     </StackPanel>
                 </Border>
 

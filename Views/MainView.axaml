@@ -50,6 +50,26 @@
         <Style Selector="Ellipse.sdot.sdot-warn">
             <Setter Property="Fill" Value="{DynamicResource WarningBrush}" />
         </Style>
+
+        <!-- ===== 账号切换器行：整行可点，当前账号用主色淡底标出 ===== -->
+        <Style Selector="Button.acct-row">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="10,8" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        </Style>
+        <Style Selector="Button.acct-row:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource HoverTintBrush}" />
+        </Style>
+        <Style Selector="Button.acct-row.acct-current">
+            <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+        </Style>
+        <Style Selector="Button.acct-row.acct-current:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+        </Style>
         <!-- 云端运行中的微弱呼吸灯：增加"活着"的科技感 -->
         <Style Selector="Ellipse.pulse">
             <Style.Animations>
@@ -96,6 +116,25 @@
                     <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                         <TextBlock Text="签到助手" FontSize="16" FontWeight="Bold"
                                    Foreground="{DynamicResource TextMainBrush}" VerticalAlignment="Center" />
+
+                        <!-- 当前账号 + 切换器入口：点击展开账号列表（仅一个账号时直接进设置页） -->
+                        <Button Classes="status-chip" VerticalAlignment="Center"
+                                Command="{Binding ToggleAccountSwitcherCommand}"
+                                ToolTip.Tip="切换账号" ToolTip.ShowDelay="250">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <Border Width="16" Height="16" CornerRadius="8"
+                                        Background="{DynamicResource AccentBrush}" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding CurrentAccountInitial}" FontSize="9"
+                                               FontWeight="Bold" Foreground="White"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <TextBlock Text="{Binding CurrentAccountName}" FontSize="11"
+                                           FontWeight="SemiBold" MaxWidth="110"
+                                           TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                <PathIcon Width="9" Height="9" Data="M7 10l5 5 5-5z" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+
                         <!-- 云端状态徽章：点击展开/收起详情 -->
                         <Button Classes="status-chip" VerticalAlignment="Center"
                                 Command="{Binding Home.ToggleCloudDetailCommand}"
@@ -119,7 +158,13 @@
                             <PathIcon Width="16" Height="16"
                                       Data="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.49.49 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />
                         </Button>
-                        <Button Classes="icon-btn" IsVisible="{Binding IsSettingsActive}"
+                        <Button Classes="icon-btn" IsVisible="{Binding !IsLogsActive}"
+                                Command="{Binding NavigateCommand}" CommandParameter="logs"
+                                ToolTip.Tip="日志" ToolTip.ShowDelay="250">
+                            <PathIcon Width="16" Height="16"
+                                      Data="M4 4h16v2H4V4zm0 5h16v2H4V9zm0 5h10v2H4v-2z" />
+                        </Button>
+                        <Button Classes="icon-btn" IsVisible="{Binding IsSubPageActive}"
                                 Command="{Binding NavigateCommand}" CommandParameter="home"
                                 ToolTip.Tip="返回签到" ToolTip.ShowDelay="250">
                             <PathIcon Width="16" Height="16"
@@ -127,6 +172,49 @@
                         </Button>
                     </StackPanel>
                 </Grid>
+
+                <!-- ===== 账号切换列表：由顶栏账号区展开（仅多账号时展开） ===== -->
+                <Border IsVisible="{Binding IsAccountSwitcherOpen}"
+                        Background="{DynamicResource RowBgBrush}" CornerRadius="12" Padding="8">
+                    <StackPanel Spacing="2">
+                        <TextBlock Text="切换账号" FontSize="11" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextSubBrush}" Margin="6,4,0,2" />
+                        <ItemsControl ItemsSource="{Binding SwitchAccounts}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Classes="acct-row" Classes.acct-current="{Binding IsCurrent}"
+                                            Command="{Binding SelectCommand}">
+                                        <Grid ColumnDefinitions="26,*,Auto">
+                                            <Border Grid.Column="0" Width="22" Height="22" CornerRadius="11"
+                                                    Background="{DynamicResource AccentBrush}" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Initial}" FontSize="10" FontWeight="Bold"
+                                                           Foreground="White" HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center" />
+                                            </Border>
+                                            <StackPanel Grid.Column="1" Spacing="1" Margin="10,0" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Display}" FontSize="12" FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource TextMainBrush}"
+                                                           TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Text="{Binding Subtitle}" FontSize="10"
+                                                           Foreground="{DynamicResource TextSubBrush}"
+                                                           IsVisible="{Binding HasSubtitle}" />
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6"
+                                                        VerticalAlignment="Center">
+                                                <TextBlock Text="✓" FontSize="11"
+                                                           Foreground="{DynamicResource SuccessBrush}"
+                                                           IsVisible="{Binding ShowCheckMark}" />
+                                                <TextBlock Text="当前" FontSize="10"
+                                                           Foreground="{DynamicResource AccentBrush}"
+                                                           IsVisible="{Binding IsCurrent}" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
 
                 <!-- ===== 云端详情：由状态徽章展开（默认收起，避免信息过载） ===== -->
                 <Border IsVisible="{Binding Home.ShowCloudDetail}"

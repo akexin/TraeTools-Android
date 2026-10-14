@@ -343,7 +343,7 @@ public partial class CheckinViewModel : ViewModelBase
             RebuildCheckList();   // 勾选与账号保持同步（新增账号也能进入自动签到）
             var (any, results) = await CheckinAllAccountsAsync();
             if (any) { StatusMessage = "自动签到完成 ✓"; RefreshTodayState(); ReloadCalendar(); LoadHistory(); }
-            if (results.Any(r => r.Ok)) await NotifyFeishuBatchAsync(results);   // 全失败不打扰
+            await NotifyBatchAsync(results);   // 全失败时不推送（由调度器内部判定）
             return any;
         }
         catch
@@ -354,20 +354,18 @@ public partial class CheckinViewModel : ViewModelBase
 
 
 
-    /// <summary>自动签到结束后，把本轮多账号结果批量推送到飞书（对齐 TraeCheckin.NotifyFeishuBatchAsync）。</summary>
-    private async Task NotifyFeishuBatchAsync(List<(string Name, bool Ok, double Gained, string Reason)> results)
+    /// <summary>
+    /// 把本轮多账号签到结果推送到所有已启用的渠道（飞书 / 邮箱 / Webhook / 钉钉 / 企业微信 / Telegram / 系统通知）。
+    ///
+    /// 原先只推飞书，现已改为统一调度：各渠道并行、互不影响，单个渠道失败不会中断其它渠道，
+    /// 也不会影响签到主流程；每个渠道的成败都会写进日志，便于排查。
+    /// 是否推送、推给谁，由设置页各渠道开关与总开关（NotifyOnCheckin）决定。
+    /// </summary>
+    private async Task NotifyBatchAsync(List<(string Name, bool Ok, double Gained, string Reason)> results)
     {
         try
         {
-            var cfg = MainViewModel.AppConfig;
-            if (cfg == null || string.IsNullOrWhiteSpace(cfg.FeishuWebhook) || results.Count == 0) return;
-            var sb = new System.Text.StringBuilder();
-            sb.AppendLine("Trae 多账号签到结果");
-            foreach (var r in results)
-            {
-                sb.AppendLine((r.Ok ? "✅ " : "⚠️ ") + r.Name + (r.Ok ? $"  获得 {r.Gained:0} 积分" : $"  失败：{r.Reason}"));
-            }
-            await TraeCheckin.FeishuNotifier.SendTextAsync(cfg.FeishuWebhook, sb.ToString());
+            await TraeTools.Services.Notify.NotifyDispatcher.SendCheckinBatchAsync(MainViewModel.AppConfig, results);
         }
         catch { /* 推送失败不影响签到 */ }
     }
@@ -688,7 +686,7 @@ public partial class CheckinViewModel : ViewModelBase
             RefreshTodayState();
             ReloadCalendar();
             LoadHistory();
-            if (results.Count > 0) await NotifyFeishuBatchAsync(results);
+            if (results.Count > 0) await NotifyBatchAsync(results);
             if (any) await MainViewModel.NotifyAsyncRefresh();
         }
         catch (Exception ex)

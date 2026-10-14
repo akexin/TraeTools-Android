@@ -32,19 +32,30 @@ public partial class SettingsViewModel : ViewModelBase
     [ObservableProperty]
     private bool _minimizeToTray = true;
 
-    /// <summary>深色模式：切换立即应用全局主题并持久化到 AppConfig（App.ApplyTheme）。</summary>
+    /// <summary>
+    /// 主题模式选择索引：0=跟随系统 / 1=浅色 / 2=深色。
+    /// 用索引而非字符串绑定，避免 ComboBox 需要 ItemTemplate 与 SelectedItem 比对逻辑。
+    /// </summary>
     [ObservableProperty]
-    private bool _darkModeEnabled;
+    private int _themeModeIndex;
 
-    partial void OnDarkModeEnabledChanged(bool value)
+    partial void OnThemeModeIndexChanged(int value)
     {
+        var mode = value switch
+        {
+            1 => "light",
+            2 => "dark",
+            _ => "system",
+        };
         try
         {
-            App.ApplyTheme(value);
+            App.ApplyThemeMode(mode);
             var cfg = MainViewModel.AppConfig;
-            if (cfg != null && cfg.DarkMode != value)
+            if (cfg != null && cfg.ThemeMode != mode)
             {
-                cfg.DarkMode = value;
+                cfg.ThemeMode = mode;
+                // 同步旧字段：若用户回退到不识别 ThemeMode 的旧版本，亮/暗仍能保持一致
+                cfg.DarkMode = mode == "dark";
                 cfg.Save();
             }
         }
@@ -72,8 +83,90 @@ public partial class SettingsViewModel : ViewModelBase
     [ObservableProperty]
     private string _feishuWebhook = "";
 
+    // ==================== 推送通知配置 ====================
+
+    /// <summary>签到完成后是否推送（总开关，关闭后所有渠道静默）。</summary>
     [ObservableProperty]
-    private bool _pushEnabled = true;
+    private bool _notifyOnCheckin = true;
+
+    /// <summary>系统本地通知开关（Windows 通知中心 / Android 通知栏）。</summary>
+    [ObservableProperty]
+    private bool _notifySystemEnabled;
+
+    /// <summary>打开系统通知时顺带申请 Android 13+ 的通知权限。</summary>
+    partial void OnNotifySystemEnabledChanged(bool value)
+    {
+        if (!value) return;
+        try
+        {
+            if (!TraeTools.Services.Notify.SystemNotifier.RequestPermission())
+                PushStatus = "已尝试申请通知权限，请在弹出的系统对话框中允许";
+        }
+        catch { /* 权限申请失败不影响开关本身 */ }
+    }
+
+    // ---- 邮箱（SMTP） ----
+    [ObservableProperty]
+    private bool _emailEnabled;
+    [ObservableProperty]
+    private string _smtpHost = "";
+    [ObservableProperty]
+    private int _smtpPort = 465;
+    /// <summary>连接安全方式索引：0=SSL(465) / 1=STARTTLS(587) / 2=无加密(25)。</summary>
+    [ObservableProperty]
+    private int _smtpSecurityIndex;
+    [ObservableProperty]
+    private string _smtpUser = "";
+    [ObservableProperty]
+    private string _smtpPassword = "";
+    [ObservableProperty]
+    private string _smtpFrom = "";
+    [ObservableProperty]
+    private string _smtpTo = "";
+
+    // ---- 通用 Webhook ----
+    [ObservableProperty]
+    private bool _webhookEnabled;
+    [ObservableProperty]
+    private string _webhookUrl = "";
+    [ObservableProperty]
+    private string _webhookBodyTemplate = "{\"title\":\"{title}\",\"content\":\"{content}\"}";
+    [ObservableProperty]
+    private string _webhookContentType = "application/json";
+
+    // ---- 钉钉 / 企业微信 ----
+    [ObservableProperty]
+    private bool _dingTalkEnabled;
+    [ObservableProperty]
+    private string _dingTalkWebhook = "";
+    [ObservableProperty]
+    private string _dingTalkSecret = "";
+    [ObservableProperty]
+    private bool _weComEnabled;
+    [ObservableProperty]
+    private string _weComWebhook = "";
+
+    // ---- Telegram ----
+    [ObservableProperty]
+    private bool _telegramEnabled;
+    [ObservableProperty]
+    private string _telegramBotToken = "";
+    [ObservableProperty]
+    private string _telegramChatId = "";
+
+    // ==================== 账号备份 ====================
+
+    /// <summary>备份口令（同时用于导出加密与导入解密，不落盘、仅本次会话有效）。</summary>
+    [ObservableProperty]
+    private string _backupPassphrase = "";
+
+    /// <summary>备份内容文本：导出时填入结果，导入时可手工粘贴。</summary>
+    [ObservableProperty]
+    private string _backupText = "";
+
+    /// <summary>是否正在执行备份读写（防重复触发）。</summary>
+    [ObservableProperty]
+    private bool _backupBusy;
 
     [ObservableProperty]
     private string _pushStatus = "";
@@ -156,7 +249,13 @@ public partial class SettingsViewModel : ViewModelBase
                 AutoCheckinTime = cfg.AutoCheckinTime;
                 CheckinIntervalSeconds = Math.Clamp(cfg.CheckinIntervalSeconds > 0 ? cfg.CheckinIntervalSeconds : 5, 1, 60);
                 MinimizeToTray = cfg.MinimizeToTray;
-                DarkModeEnabled = cfg.DarkMode;
+                ThemeModeIndex = cfg.ThemeMode switch
+                {
+                    "light" => 1,
+                    "dark" => 2,
+                    _ => 0,
+                };
+                LoadNotifySettings(cfg);
 
                 var acc = cfg.Accounts.FirstOrDefault(a => a.Id == cfg.ActiveAccountId)
                           ?? cfg.Accounts.FirstOrDefault();
@@ -263,8 +362,11 @@ public partial class SettingsViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// 选中账号变化 → Token 面板联动显示该账号的凭证与更新时间；
-    /// 同时把该账号设为全局激活账号，仪表盘/签到页随之切换显示。
+    /// 选中账号变化 → Token 面板联动显示该账号的凭证与更新时间，
+    /// 并把该账号设为**全局激活账号**（首页仪表盘、签到引擎、云端状态随之切换）。
+    ///
+    /// 说明：2.0 曾把这里改成「仅查看、不切换」，导致设置页无法切换账号；
+    /// 现按需求恢复为点击即切换——设置页是账号列表的天然入口，多一个入口对低频操作更友好。
     /// </summary>
     partial void OnSelectedAccountChanged(AccountInfo? value)
     {
@@ -277,7 +379,15 @@ public partial class SettingsViewModel : ViewModelBase
                 TokenString = MaskToken(acc.Token);
                 TokenUpdateTime = acc.TokenUpdatedAt?.ToString("yyyy-MM-dd HH:mm:ss") ?? "—";
                 DeviceIdText = acc.DeviceId;
-                // 设置页仅用于查看/编辑该账号，不再切换全局激活账号
+
+                // 切换全局激活账号（仅当确有变化时才保存与刷新，避免无谓的连锁刷新）
+                if (cfg != null && cfg.ActiveAccountId != acc.Id)
+                {
+                    cfg.ActiveAccountId = acc.Id;
+                    try { cfg.Save(); } catch { /* 保存失败不影响界面联动 */ }
+                    foreach (var item in Accounts) item.IsCurrent = item.Id == acc.Id;
+                    MainViewModel.NotifyActiveAccountChanged();
+                }
             }
             else
             {
@@ -424,13 +534,11 @@ public partial class SettingsViewModel : ViewModelBase
             var cfg = MainViewModel.AppConfig;
             if (cfg != null)
             {
-                cfg.AutoCheckinEnabled = AutoCheckinEnabled;
-                cfg.AutoCheckinTime = AutoCheckinTime;
-                cfg.CheckinIntervalSeconds = Math.Clamp(CheckinIntervalSeconds, 1, 60);
-                cfg.FeishuWebhook = FeishuWebhook;
-                cfg.MinimizeToTray = MinimizeToTray;
+                ApplyToConfig(cfg);
                 cfg.Save();
-                AccountHelpers.AppLog("account", "", $"设置已保存：自动签到={AutoCheckinEnabled}，时间={AutoCheckinTime}，间隔={cfg.CheckinIntervalSeconds}秒，托盘={MinimizeToTray}");
+                AccountHelpers.AppLog("account", "",
+                    $"设置已保存：自动签到={AutoCheckinEnabled}，时间={AutoCheckinTime}，间隔={cfg.CheckinIntervalSeconds}秒，托盘={MinimizeToTray}，" +
+                    $"推送={DescribeEnabledChannels(cfg)}");
             }
 
             PushStatus = "已保存 ✓";
@@ -438,6 +546,167 @@ public partial class SettingsViewModel : ViewModelBase
         catch
         {
             PushStatus = "保存失败";
+        }
+    }
+
+    /// <summary>把设置页的全部字段写回配置对象（不落盘，由调用方决定何时 Save）。</summary>
+    private void ApplyToConfig(AppConfig cfg)
+    {
+        cfg.AutoCheckinEnabled = AutoCheckinEnabled;
+        cfg.AutoCheckinTime = AutoCheckinTime;
+        cfg.CheckinIntervalSeconds = Math.Clamp(CheckinIntervalSeconds, 1, 60);
+        cfg.FeishuWebhook = FeishuWebhook;
+        cfg.MinimizeToTray = MinimizeToTray;
+
+        cfg.NotifyOnCheckin = NotifyOnCheckin;
+        cfg.NotifySystemEnabled = NotifySystemEnabled;
+
+        cfg.EmailEnabled = EmailEnabled;
+        cfg.SmtpHost = SmtpHost.Trim();
+        cfg.SmtpPort = SmtpPort <= 0 ? 465 : SmtpPort;
+        cfg.SmtpSecurity = SmtpSecurityIndex switch
+        {
+            1 => "starttls",
+            2 => "none",
+            _ => "ssl",
+        };
+        cfg.SmtpUser = SmtpUser.Trim();
+        cfg.SmtpPassword = SmtpPassword;
+        cfg.SmtpFrom = SmtpFrom.Trim();
+        cfg.SmtpTo = SmtpTo.Trim();
+
+        cfg.WebhookEnabled = WebhookEnabled;
+        cfg.WebhookUrl = WebhookUrl.Trim();
+        cfg.WebhookBodyTemplate = WebhookBodyTemplate;
+        cfg.WebhookContentType = WebhookContentType.Trim();
+
+        cfg.DingTalkEnabled = DingTalkEnabled;
+        cfg.DingTalkWebhook = DingTalkWebhook.Trim();
+        cfg.DingTalkSecret = DingTalkSecret.Trim();
+
+        cfg.WeComEnabled = WeComEnabled;
+        cfg.WeComWebhook = WeComWebhook.Trim();
+
+        cfg.TelegramEnabled = TelegramEnabled;
+        cfg.TelegramBotToken = TelegramBotToken.Trim();
+        cfg.TelegramChatId = TelegramChatId.Trim();
+    }
+
+    /// <summary>从配置对象读回全部推送相关字段。</summary>
+    private void LoadNotifySettings(AppConfig cfg)
+    {
+        NotifyOnCheckin = cfg.NotifyOnCheckin;
+        NotifySystemEnabled = cfg.NotifySystemEnabled;
+
+        EmailEnabled = cfg.EmailEnabled;
+        SmtpHost = cfg.SmtpHost ?? "";
+        SmtpPort = cfg.SmtpPort > 0 ? cfg.SmtpPort : 465;
+        SmtpSecurityIndex = (cfg.SmtpSecurity ?? "ssl").ToLowerInvariant() switch
+        {
+            "starttls" => 1,
+            "none" => 2,
+            _ => 0,
+        };
+        SmtpUser = cfg.SmtpUser ?? "";
+        SmtpPassword = cfg.SmtpPassword ?? "";
+        SmtpFrom = cfg.SmtpFrom ?? "";
+        SmtpTo = cfg.SmtpTo ?? "";
+
+        WebhookEnabled = cfg.WebhookEnabled;
+        WebhookUrl = cfg.WebhookUrl ?? "";
+        if (!string.IsNullOrWhiteSpace(cfg.WebhookBodyTemplate)) WebhookBodyTemplate = cfg.WebhookBodyTemplate;
+        if (!string.IsNullOrWhiteSpace(cfg.WebhookContentType)) WebhookContentType = cfg.WebhookContentType;
+
+        DingTalkEnabled = cfg.DingTalkEnabled;
+        DingTalkWebhook = cfg.DingTalkWebhook ?? "";
+        DingTalkSecret = cfg.DingTalkSecret ?? "";
+
+        WeComEnabled = cfg.WeComEnabled;
+        WeComWebhook = cfg.WeComWebhook ?? "";
+
+        TelegramEnabled = cfg.TelegramEnabled;
+        TelegramBotToken = cfg.TelegramBotToken ?? "";
+        TelegramChatId = cfg.TelegramChatId ?? "";
+    }
+
+    /// <summary>把当前启用的渠道拼成一句用于日志/状态条的描述。</summary>
+    private string DescribeEnabledChannels(AppConfig cfg)
+    {
+        var list = new System.Collections.Generic.List<string>();
+        if (!string.IsNullOrWhiteSpace(cfg.FeishuWebhook)) list.Add("飞书");
+        if (cfg.EmailEnabled) list.Add("邮箱");
+        if (cfg.WebhookEnabled) list.Add("Webhook");
+        if (cfg.DingTalkEnabled) list.Add("钉钉");
+        if (cfg.WeComEnabled) list.Add("企业微信");
+        if (cfg.TelegramEnabled) list.Add("Telegram");
+        if (cfg.NotifySystemEnabled) list.Add("系统通知");
+        return list.Count == 0 ? "无" : string.Join("、", list);
+    }
+
+    /// <summary>
+    /// 测试推送：先把界面上的当前填写值写进配置（否则测的是上次保存的旧值，容易误判），
+    /// 再向所有已启用渠道发送一条测试消息，并逐渠道汇总结果。
+    /// </summary>
+    [RelayCommand]
+    private async Task TestNotifyAll()
+    {
+        var cfg = MainViewModel.AppConfig;
+        if (cfg == null)
+        {
+            PushStatus = "配置未就绪";
+            return;
+        }
+        try
+        {
+            ApplyToConfig(cfg);
+            var enabled = DescribeEnabledChannels(cfg);
+            if (enabled == "无")
+            {
+                PushStatus = "尚未启用任何推送渠道";
+                return;
+            }
+
+            PushStatus = $"正在测试 {enabled}…";
+            var outcomes = await TraeTools.Services.Notify.NotifyDispatcher.SendAsync(
+                cfg, "TraeTools 推送测试",
+                $"这是一条测试消息，用于确认推送渠道配置正确。\n发送时间：{DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+
+            PushStatus = TraeTools.Services.Notify.NotifyDispatcher.Summarize(outcomes);
+        }
+        catch (Exception ex)
+        {
+            PushStatus = "测试异常：" + ex.Message;
+        }
+    }
+
+    /// <summary>测试邮件：只测邮箱渠道，便于在配置 SMTP 时快速验证（不必等其它渠道）。</summary>
+    [RelayCommand]
+    private async Task TestEmail()
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(SmtpHost))
+            {
+                PushStatus = "请先填写 SMTP 服务器地址";
+                return;
+            }
+            if (string.IsNullOrWhiteSpace(SmtpTo))
+            {
+                PushStatus = "请先填写收件人";
+                return;
+            }
+            PushStatus = "正在发送测试邮件…";
+            var r = await TraeTools.Services.Notify.EmailNotifier.SendAsync(
+                SmtpHost.Trim(), SmtpPort <= 0 ? 465 : SmtpPort,
+                SmtpSecurityIndex switch { 1 => "starttls", 2 => "none", _ => "ssl" },
+                SmtpUser.Trim(), SmtpPassword, SmtpFrom.Trim(), SmtpTo.Trim(),
+                "TraeTools 邮件推送测试",
+                $"这是一条测试邮件。\n发送时间：{DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+            PushStatus = r.Ok ? "测试邮件已发送 ✓" : r.Message;
+        }
+        catch (Exception ex)
+        {
+            PushStatus = "邮件测试异常：" + ex.Message;
         }
     }
 
@@ -454,8 +723,8 @@ public partial class SettingsViewModel : ViewModelBase
                 PushStatus = "当前账号尚未登录，无 Token 可复制";
                 return;
             }
-            var top = UiHost.MainWindow;
-            if (top?.Clipboard is { } cb)
+            var cb = UiHost.Clipboard;
+            if (cb != null)
             {
                 await cb.SetTextAsync(token);
                 PushStatus = "Token 已复制到剪贴板";
@@ -471,26 +740,10 @@ public partial class SettingsViewModel : ViewModelBase
         }
     }
 
-    [RelayCommand]
-    private async Task TestPush()
-    {
-        try
-        {
-            if (string.IsNullOrEmpty(FeishuWebhook))
-            {
-                PushStatus = "Webhook 为空";
-                return;
-            }
-            bool ok = await FeishuNotifier.SendTextAsync(FeishuWebhook, "【TraeTools】飞书推送测试消息");
-            PushStatus = ok ? "测试成功 ✓" : "测试失败";
-        }
-        catch
-        {
-            PushStatus = "测试异常";
-        }
-    }
-
-    /// <summary>添加/登录账号：打开登录窗口（内嵌 WebView2 自动登录优先），成功后写入配置并更新列表。</summary>
+    /// <summary>
+    /// 添加/登录账号：打开登录窗口（四种方式：内嵌浏览器自动登录 / 剪贴板识别 /
+    /// 读取本机客户端 / 手动粘贴），成功后写入配置并更新列表。
+    /// </summary>
     [RelayCommand]
     private async Task AddAccount()
     {
@@ -543,7 +796,9 @@ public partial class SettingsViewModel : ViewModelBase
                 await AccountHelpers.RefreshProfileAsync(acc, force: true);
                 PushStatus = "账号登录成功 ✓，Token 已保存";
                 PopulateAccounts();
-                // 新账号加入后让仪表盘/用量等全局页立即呈现新账号
+                // 让列表选中新账号：Token 面板与「当前」标记立即对齐（会顺带把新账号设为激活）
+                SelectedAccount = Accounts.FirstOrDefault(a => a.Id == acc.Id) ?? SelectedAccount;
+                // 新账号加入后让仪表盘/顶栏切换器等全局页立即呈现新账号
                 MainViewModel.NotifyActiveAccountChanged();
             }
             else
@@ -606,6 +861,213 @@ public partial class SettingsViewModel : ViewModelBase
             PushStatus = "删除账号失败：" + ex.Message;
         }
     }
+    // ==================== 账号备份（导出 / 导入） ====================
+
+    /// <summary>
+    /// 导出全部账号为加密备份。
+    /// 优先弹系统文件保存框；平台不支持文件选择器时退化为「复制到剪贴板」，
+    /// 保证任何平台都能把备份内容取走。
+    /// </summary>
+    [RelayCommand]
+    private async Task ExportAccounts()
+    {
+        if (BackupBusy) return;
+        var cfg = MainViewModel.AppConfig;
+        if (cfg == null)
+        {
+            PushStatus = "配置未就绪";
+            return;
+        }
+        if (BackupPassphrase.Length < 6)
+        {
+            PushStatus = "请先填写备份口令（至少 6 位），它用于加密备份文件";
+            return;
+        }
+
+        BackupBusy = true;
+        try
+        {
+            var r = TraeTools.Services.Login.AccountBackup.Export(cfg.Accounts, BackupPassphrase);
+            if (!r.Ok || r.Text == null)
+            {
+                PushStatus = r.Message;
+                return;
+            }
+            BackupText = r.Text;
+
+            // 尝试走系统文件保存框
+            try
+            {
+                var sp = UiHost.Root?.StorageProvider;
+                if (sp is { CanSave: true })
+                {
+                    var file = await sp.SaveFilePickerAsync(new Avalonia.Platform.Storage.FilePickerSaveOptions
+                    {
+                        Title = "保存账号备份",
+                        SuggestedFileName = TraeTools.Services.Login.AccountBackup.SuggestedFileName(),
+                        DefaultExtension = "json",
+                        FileTypeChoices = new[]
+                        {
+                            new Avalonia.Platform.Storage.FilePickerFileType("TraeTools 账号备份")
+                            {
+                                Patterns = new[] { "*.json" },
+                            },
+                        },
+                    });
+                    if (file != null)
+                    {
+                        await using var stream = await file.OpenWriteAsync();
+                        stream.SetLength(0);
+                        await using var writer = new System.IO.StreamWriter(stream, System.Text.Encoding.UTF8);
+                        await writer.WriteAsync(r.Text);
+                        PushStatus = $"备份已保存：{file.Name}（{r.Imported} 个账号）";
+                        AccountHelpers.AppLog("account", "", $"导出账号备份：{r.Imported} 个账号 → {file.Name}");
+                        return;
+                    }
+                    PushStatus = "已取消保存";
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                AccountHelpers.AppLog("account", "", "文件保存框不可用，退化为剪贴板：" + ex.Message);
+            }
+
+            // 退化方案：复制到剪贴板
+            var clip = UiHost.Clipboard;
+            if (clip != null)
+            {
+                await clip.SetTextAsync(r.Text);
+                PushStatus = $"文件保存不可用，备份内容（{r.Imported} 个账号）已复制到剪贴板，请自行粘贴保存到 .json 文件";
+            }
+            else
+            {
+                PushStatus = "备份已生成但无法保存：文件选择器与剪贴板均不可用";
+            }
+        }
+        catch (Exception ex)
+        {
+            PushStatus = "导出失败：" + ex.Message;
+        }
+        finally
+        {
+            BackupBusy = false;
+        }
+    }
+
+    /// <summary>选择备份文件并把内容读进文本框（随后由「导入」按钮统一处理）。</summary>
+    [RelayCommand]
+    private async Task PickBackupFile()
+    {
+        try
+        {
+            var sp = UiHost.Root?.StorageProvider;
+            if (sp is not { CanOpen: true })
+            {
+                PushStatus = "当前平台不支持文件选择器，请把备份内容直接粘贴到下方文本框";
+                return;
+            }
+            var files = await sp.OpenFilePickerAsync(new Avalonia.Platform.Storage.FilePickerOpenOptions
+            {
+                Title = "选择账号备份文件",
+                AllowMultiple = false,
+                FileTypeFilter = new[]
+                {
+                    new Avalonia.Platform.Storage.FilePickerFileType("TraeTools 账号备份")
+                    {
+                        Patterns = new[] { "*.json", "*.txt" },
+                    },
+                },
+            });
+            if (files.Count == 0)
+            {
+                PushStatus = "已取消选择";
+                return;
+            }
+            var file = files[0];
+            await using var stream = await file.OpenReadAsync();
+            using var reader = new System.IO.StreamReader(stream, System.Text.Encoding.UTF8);
+            BackupText = await reader.ReadToEndAsync();
+            PushStatus = $"已读取备份文件：{file.Name}（请填写口令后点「导入账号」）";
+        }
+        catch (Exception ex)
+        {
+            PushStatus = "读取备份文件失败：" + ex.Message;
+        }
+    }
+
+    /// <summary>用文本框中的备份内容 + 口令执行导入（合并去重，不覆盖本地已有账号）。</summary>
+    [RelayCommand]
+    private async Task ImportAccounts()
+    {
+        if (BackupBusy) return;
+        var cfg = MainViewModel.AppConfig;
+        if (cfg == null)
+        {
+            PushStatus = "配置未就绪";
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(BackupText))
+        {
+            PushStatus = "请先选择备份文件，或把备份内容粘贴到文本框";
+            return;
+        }
+        if (string.IsNullOrEmpty(BackupPassphrase))
+        {
+            PushStatus = "请输入导出该备份时使用的口令";
+            return;
+        }
+
+        // 覆盖式导入会移除本地账号，属于高风险操作，先确认
+        var ask = new PromptWindow(
+            "导入账号备份",
+            $"将把备份中的账号合并到本机（同账号刷新凭证，新账号追加），不会删除现有账号。\n\n" +
+            $"当前本机已有 {cfg.Accounts.Count} 个账号。\n\n是否继续？",
+            "导入", "取消");
+        bool ok = await OverlayDialog.ShowAsync<bool>(ask, UiHost.MainWindow);
+        if (!ok)
+        {
+            PushStatus = "已取消导入";
+            return;
+        }
+
+        BackupBusy = true;
+        try
+        {
+            var (readOk, message, accounts) = TraeTools.Services.Login.AccountBackup.Read(BackupText, BackupPassphrase);
+            if (!readOk || accounts.Count == 0)
+            {
+                PushStatus = message;
+                return;
+            }
+
+            var merged = TraeTools.Services.Login.AccountBackup.Merge(cfg, accounts);
+            if (!merged.Ok)
+            {
+                PushStatus = merged.Message;
+                return;
+            }
+
+            cfg.Save();
+            PopulateAccounts();
+            PushStatus = merged.Message;
+
+            // 顺手刷新账号资料与状态，并让首页/切换器同步看到新账号
+            await RefreshAccountStatesAsync();
+            MainViewModel.NotifyActiveAccountChanged();
+
+            AccountHelpers.AppLog("account", "", $"导入账号备份：{merged.Message}");
+        }
+        catch (Exception ex)
+        {
+            PushStatus = "导入失败：" + ex.Message;
+        }
+        finally
+        {
+            BackupBusy = false;
+        }
+    }
+
     [RelayCommand]
     private void OpenRepo()
     {

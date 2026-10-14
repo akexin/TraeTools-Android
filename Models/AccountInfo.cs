@@ -99,6 +99,37 @@ public class CheckinRecord
         : (Result == "—" ? new SolidColorBrush(Avalonia.Media.Color.FromRgb(0x94, 0xA3, 0xB8)) : new SolidColorBrush(Avalonia.Media.Color.FromRgb(0xEF, 0x44, 0x44)));
 }
 
+/// <summary>
+/// 顶栏账号切换器的列表项。
+/// 刻意做得比 <see cref="AccountInfo"/> 轻：切换器只需要「一眼看清是哪个号、当前选中哪个」，
+/// 不加载头像、不查询签到状态，避免顶栏展开时发起网络请求。
+/// </summary>
+public sealed class AccountSwitchItem
+{
+    /// <summary>源账号 Id。</summary>
+    public required string Id { get; init; }
+    /// <summary>展示名（昵称或脱敏手机号，均无则回退短 Id）。</summary>
+    public required string Display { get; init; }
+    /// <summary>副标题：脱敏手机号 / 学生标记等辅助识别信息。</summary>
+    public string Subtitle { get; init; } = "";
+    /// <summary>首字母头像占位字符。</summary>
+    public string Initial { get; init; } = "?";
+    /// <summary>是否为当前激活账号（决定列表中的高亮与右侧「当前」标记）。</summary>
+    public bool IsCurrent { get; init; }
+    /// <summary>今日是否已签到（用轻量符号提示，不触发网络请求）。</summary>
+    public bool CheckedInToday { get; init; }
+    /// <summary>
+    /// 点击本项切换到该账号的命令（由 MainViewModel 注入）。
+    /// 采用「命令挂在数据项上」而非在模板里向父级 DataContext 反查：
+    /// 后者依赖 $parent 绑定语法，数据模板层级一变就会静默失效。
+    /// </summary>
+    public System.Windows.Input.ICommand? SelectCommand { get; set; }
+    /// <summary>是否已签到今日（驱动行内 ✓ 标记的显示）。</summary>
+    public bool ShowCheckMark => CheckedInToday;
+    /// <summary>是否有副标题（脱敏手机号等）：无数据时整行隐藏，避免出现空行。</summary>
+    public bool HasSubtitle => !string.IsNullOrEmpty(Subtitle);
+}
+
 /// <summary>签到页账号勾选项：IsChecked 与 TraeAccount.Enabled 双向同步（勾谁签谁，手动/自动一致）。</summary>
 public sealed partial class AccountCheckItem : ObservableObject
 {
