@@ -32,13 +32,15 @@
         <ScrollViewer Grid.Row="0" Background="Transparent" HorizontalScrollBarVisibility="Disabled">
             <StackPanel Spacing="16">
 
-                <!-- ===== Header ===== -->
-                <Grid ColumnDefinitions="*,Auto">
-                    <StackPanel Grid.Column="0" Spacing="4">
+                <!-- ===== Header：返回 + 标题 + 保存 ===== -->
+                <Grid ColumnDefinitions="Auto,*,Auto">
+                    <Button Grid.Column="0" Classes="btn-ghost" Content="← 返回" Command="{Binding GoBackCommand}"
+                            VerticalAlignment="Center" Margin="0,0,8,0" />
+                    <StackPanel Grid.Column="1" Spacing="4">
                         <TextBlock Text="设置" Classes="page-title" />
                         <TextBlock Text="外观 · 自动化 · Token · 推送 · 账号管理" Classes="page-subtitle" />
                     </StackPanel>
-                    <Button Grid.Column="1" Classes="btn-primary" Content="保存设置" Command="{Binding SaveSettingsCommand}" />
+                    <Button Grid.Column="2" Classes="btn-primary" Content="保存设置" Command="{Binding SaveSettingsCommand}" />
                 </Grid>
 
                 <!-- ===== 通用与自动签到：垂直列表流（替代左右双列，修复窄屏遮挡/拥挤） ===== -->

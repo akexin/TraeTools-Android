@@ -6,28 +6,26 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using TraeCheckin;
 using TraeSwitch.Services;
-using TraeTools.Services.Usage;
 
 namespace TraeTools.ViewModels;
 
 public partial class MainViewModel : ViewModelBase
 {
-    private readonly DashboardViewModel _dashboard;
+    private readonly HomeViewModel _home;
     private readonly CheckinViewModel _checkin;
     private readonly SwitchViewModel _switch;
     private readonly CloudViewModel _cloud;
     private readonly SettingsViewModel _settings;
-    private readonly UsageViewModel _usage;
 
     [ObservableProperty]
     private ViewModelBase? _currentPage;
 
     [ObservableProperty]
-    private string _currentPageKey = "dashboard";
+    private string _currentPageKey = "home";
 
     /// <summary>
     /// 紧凑模式（手机屏适配）：宿主宽度 &lt; 640 逻辑像素时由 MainView 按实际 Bounds 切换。
-    /// 紧凑模式下侧栏隐藏，改为顶部品牌栏 + 底部标签栏；内容边距收紧、仪表盘单列堆叠。
+    /// 单页模式下仅用于收紧内容区边距。
     /// </summary>
     [ObservableProperty]
     private bool _isCompact;
@@ -35,7 +33,6 @@ public partial class MainViewModel : ViewModelBase
     // 全局服务容器：页面 VM 通过静态属性访问
     public static AppConfig? AppConfig;
     public static TraeApiClient? CheckinApi;
-    public static TraeUsageClient? UsageApi;
     public static SettingsStore? SwitchSettings;
     public static VaultService? Vault;
     public static GitHubApiClient? GitHubApi;
@@ -66,15 +63,6 @@ public partial class MainViewModel : ViewModelBase
         catch
         {
             CheckinApi = null;
-        }
-
-        try
-        {
-            UsageApi = new TraeUsageClient();
-        }
-        catch
-        {
-            UsageApi = null;
         }
 
         try
@@ -134,25 +122,22 @@ public partial class MainViewModel : ViewModelBase
         }
 
         Instance = this;
-        _dashboard = new DashboardViewModel();
         _checkin = new CheckinViewModel();
         _switch = new SwitchViewModel();
         _cloud = new CloudViewModel();
         _settings = new SettingsViewModel();
-        _usage = new UsageViewModel();
+        _home = new HomeViewModel(_checkin, _cloud);
 
-        _dashboard.NavigateRequested += p => Navigate(p);
+        _home.NavigateRequested += p => Navigate(p);
         _checkin.NavigateRequested += p => Navigate(p);
-        _switch.NavigateRequested += p => Navigate(p);
         _cloud.NavigateRequested += p => Navigate(p);
         _settings.NavigateRequested += p => Navigate(p);
-        _usage.NavigateRequested += p => Navigate(p);
 
-        CurrentPage = _dashboard;
-        CurrentPageKey = "dashboard";
+        CurrentPage = _home;
+        CurrentPageKey = "home";
 
-        // 首次启动即按激活账号刷新仪表盘状态/积分/奖励（否则启动时只显示旧缓存，状态不更新）
-        _ = _dashboard.RefreshAllAsync();
+        // 启动即按激活账号刷新今日签到状态/奖励与签到日志
+        _checkin.Reload();
 
         // 启动日志：记录账号概况，便于排查问题
         try
@@ -171,42 +156,23 @@ public partial class MainViewModel : ViewModelBase
         catch { /* 启动日志失败不影响 */ }
     }
 
-    public bool IsDashboardActive => CurrentPageKey == "dashboard";
-    public bool IsCheckinActive => CurrentPageKey == "checkin";
-    public bool IsSwitchActive => CurrentPageKey == "switch";
-    public bool IsCloudActive => CurrentPageKey == "cloud";
-    public bool IsSettingsActive => CurrentPageKey == "settings";
-    public bool IsUsageActive => CurrentPageKey == "usage";
-
-    partial void OnCurrentPageKeyChanged(string value)
-    {
-        OnPropertyChanged(nameof(IsDashboardActive));
-        OnPropertyChanged(nameof(IsCheckinActive));
-        OnPropertyChanged(nameof(IsSwitchActive));
-        OnPropertyChanged(nameof(IsCloudActive));
-        OnPropertyChanged(nameof(IsSettingsActive));
-        OnPropertyChanged(nameof(IsUsageActive));
-    }
-
-    /// <summary>账号管理切换激活账号后：仪表盘完整刷新 + 签到页 + 账号状态同步 + 用量页联动。</summary>
+    /// <summary>账号管理切换激活账号后：首页签到状态/日志刷新 + 账号状态同步。</summary>
     public static async void NotifyActiveAccountChanged()
     {
         if (Instance is not { } vm) return;
         try
         {
-            await vm._dashboard.RefreshAllAsync();
             vm._checkin.Reload();
-            vm._usage.Reload();
             await vm._settings.RefreshAccountStatesAsync();
         }
         catch { /* 异步刷新失败不应导致崩溃 */ }
     }
 
-    /// <summary>签到完成后同步仪表盘与账号状态。</summary>
+    /// <summary>签到完成后同步首页与账号状态。</summary>
     public static async Task NotifyAsyncRefresh()
     {
         if (Instance is not { } vm) return;
-        await vm._dashboard.RefreshAllAsync();
+        vm._checkin.Reload();
         await vm._settings.RefreshAccountStatesAsync();
     }
 
@@ -273,35 +239,16 @@ public partial class MainViewModel : ViewModelBase
     {
         switch (page)
         {
-            case "dashboard":
-                _ = _dashboard.RefreshAllAsync();   // 每次进入仪表盘都按当前激活账号真实验证刷新
-                CurrentPage = _dashboard;
-                CurrentPageKey = "dashboard";
-                break;
-            case "checkin":
-                _checkin.Reload();     // 同上，签到页跟随激活账号
-                CurrentPage = _checkin;
-                CurrentPageKey = "checkin";
-                break;
-            case "switch":
-                CurrentPage = _switch;
-                CurrentPageKey = "switch";
-                break;
-            case "cloud":
-                CurrentPage = _cloud;
-                CurrentPageKey = "cloud";
+            case "home":
+                _checkin.Reload();     // 回到首页时跟随激活账号刷新签到状态/日志
+                CurrentPage = _home;
+                CurrentPageKey = "home";
                 break;
             case "settings":
                 _ = _settings.RefreshAccountStatesAsync();
                 CurrentPage = _settings;
                 CurrentPageKey = "settings";
                 break;
-            case "usage":
-                    _usage.Reload();        // 先展示本地记录，再后台增量同步近 7 天
-                    _ = _usage.RefreshCommand.ExecuteAsync(null);
-                    CurrentPage = _usage;
-                    CurrentPageKey = "usage";
-                    break;
         }
     }
 }

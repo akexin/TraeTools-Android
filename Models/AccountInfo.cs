@@ -188,12 +188,42 @@ public class SwitchStep
     }
 }
 
-public class CloudStep
+public class CloudStep : System.ComponentModel.INotifyPropertyChanged
 {
+    private string _status = "pending";
+
     public int Index { get; set; }
     public string Title { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
-    public string Status { get; set; } = "pending";
+
+    /// <summary>步骤状态：ok=已完成 / progress=进行中 / pending=待启用 / warn=失败。变更即时通知（首页时间轴实时着色）。</summary>
+    public string Status
+    {
+        get => _status;
+        set
+        {
+            if (_status == value) return;
+            _status = value;
+            OnPropertyChanged(nameof(Status));
+            OnPropertyChanged(nameof(StatusText));
+            OnPropertyChanged(nameof(StatusFgBrush));
+            OnPropertyChanged(nameof(StatusBgBrush));
+            OnPropertyChanged(nameof(IsDone));
+            OnPropertyChanged(nameof(IsRunning));
+            OnPropertyChanged(nameof(IsWarn));
+        }
+    }
+
+    public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+
+    private void OnPropertyChanged(string name)
+        => PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(name));
+
+    // 布尔位：供视图 Classes 驱动主题化样式
+    public bool IsDone => Status == "ok";
+    public bool IsRunning => Status == "progress";
+    public bool IsWarn => Status == "warn";
+
     public string StatusText => Status switch
     {
         "ok" => "已完成 ✓",

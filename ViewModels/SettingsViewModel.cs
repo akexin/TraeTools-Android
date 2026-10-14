@@ -127,6 +127,10 @@ public partial class SettingsViewModel : ViewModelBase
     /// <summary>开机自启 / 托盘驻留是否可用：仅 Windows 桌面端（Android 无注册表自启与系统托盘）。</summary>
     public bool IsWindowsDesktopOnlyFeaturesSupported => OperatingSystem.IsWindows();
 
+    /// <summary>返回首页（单页模式：设置页顶部返回按钮）。</summary>
+    [RelayCommand]
+    private void GoBack() => RaiseNavigateRequested("home");
+
     public SettingsViewModel()
     {
         // 账号增删时刷新空状态标记
