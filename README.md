@@ -1,7 +1,11 @@
 # TraeTools-Android
 
 > 极简 Trae 签到助手：本地一键签到 · 云端自动托管 · 多账号切换 · 多渠道推送
-> 支持 **Windows 桌面端** 与 **Android 手机端**（APK）
+> **纯 Android 手机端（APK）** —— 本仓库不再构建或发布任何 Windows 版本
+
+> ⚠️ 2026-10-15 起本仓库收敛为**单一 Android 目标**：`net10.0-windows` 目标、WinForms/WebView2
+> 登录宿主、DPAPI 实现、托盘图标、单文件 exe 发布与相关 CI/发布作业**均已移除**，只产出 APK。
+> 因此下文涉及 Windows 的说明一律以「已移除」理解；Android 端的能力见「平台能力对照」。
 
 TraeTools-android 是对 **TRAE-Tools** 的重构安卓版，用 Avalonia 重写为现代化跨平台应用（.NET 10）。
 **2.0 做了产品减法**：去除用量统计与繁复设置，界面收敛为**单页仪表盘**——本地签到、云端托管、最近记录三块，专注、清晰、一次点完。
@@ -21,7 +25,7 @@ TraeTools-android 是对 **TRAE-Tools** 的重构安卓版，用 Avalonia 重写
 | **自定义 16 位设备号** | 设备号输入框支持**手动填写 + 随机生成 + 保存**，实时校验「必须 16 位数字」与「不得与其它账号重复」（重复会触发风控 9074），不合法时给出明确原因 |
 | **账号保活** | 每个账号独立的**开关 + 间隔（5–1440 分钟）**。到点用会话 Cookie 静默换新 Token，顺带刷新积分与资料；只探测不签到，不影响「今日是否已签」。支持「立即保活」。⚠️ 与自动签到一样仅在软件运行期间有效，无人值守请用云端签到 |
 | **安全检查** | 一键审计 8 项：配置加密状态、平台加解密自检、**明文敏感字段残留**、设备号合规与重复、Token/会话有效期、保活覆盖、数据目录私有性、**日志是否泄漏完整凭证**。结论按「风险 → 警告 → 通过」排序，只列字段名不显示内容，全程本地判断、不上传 |
-| **GitHub 授权自动开浏览器**（修复） | 「授权 GitHub」现在会直接拉起系统默认浏览器打开授权页，Windows / Android 一致。Android 侧按 Activity → Application 上下文 → 系统选择器三级回退；**任一环节失败都会写进日志**（`日志 → 全部 → browser`），不再出现「点了没反应也查不到原因」 |
+| **GitHub 授权自动开浏览器**（修复） | 「授权 GitHub」现在会直接拉起系统默认浏览器打开授权页。本机（Android）侧按 Activity → Application 上下文 → 系统选择器三级回退；**任一环节失败都会写进日志**（`日志 → 全部 → browser`），不再出现「点了没反应也查不到原因」 |
 | **顶栏账号下三角改为展开账号列表**（修复） | 过去只有一个账号时点下三角会被直接带去设置页，感觉像「被强行拉去登录」。现在**始终展开账号列表**，列表底部固定提供「添加账号 / 管理账号」入口 |
 | **Android 凭证解密失败**（修复，重要） | 旧版把「跨平台密文互不通用」这条判断写在了共享封装里，而 **Android 自己的密文正是 `and-v1:` 前缀**，于是被自己的规则拦下——Android 上**所有**加密字段都解不开：Token 每次启动即丢、**设备号退化成密文被当作设备号发出**，直接触发风控 `9074 当前参与用户太多`。现已把该判断下移到 Windows 实现内部，并加了自愈：运行时发现设备号不是 16 位数字就自动换发新号（换号后需重新「云端部署」） |
 
@@ -51,7 +55,7 @@ TraeTools-android 是对 **TRAE-Tools** 的重构安卓版，用 Avalonia 重写
 - **账号备份**：口令加密导出 / 导入，跨设备迁移账号
 - **云端状态徽章**：顶栏常驻「🟢 云端运行中 / 🟡 待部署 / 🔴 云端未部署」，点击展开云端详情
 - **账号资料**：展示每个账号的昵称 / 脱敏手机号 / 头像 / 学生认证徽章（在设置中管理）
-- **应用更新（不强制）**：内置检查更新，发现新版仅提示；Windows 端经用户确认后才下载并后台替换，Android 端仅引导至下载页手动安装——均不强制，可随时取消
+- **应用更新（不强制）**：内置检查更新，发现新版仅提示；仅提示并引导至 GitHub 下载页手动安装新版 APK（不自动安装）——不强制，可随时取消
 
 ## 界面
 
@@ -72,29 +76,25 @@ TraeTools-android 是对 **TRAE-Tools** 的重构安卓版，用 Avalonia 重写
 
 | 平台 | 产物 | 说明 |
 |---|---|---|
-| Windows | `TraeTools.exe` / `TraeTools-win-x64.zip` | 单文件自包含，无需安装 .NET 运行时 |
 | Android | `TraeTools-Android.apk` | 支持 Android 8.0（API 26）及以上，下载后需允许「安装未知来源应用」 |
 
-> Android 版与 Windows 版数据相互独立（加密机制不同），账号需在手机端重新登录一次。
+> Release 里现在**只有 APK 一个资产**（含签名三方案 v1/v2/v3 与证书指纹门禁）。
 
 ### 方式二：源码编译
 
-需要 **.NET 10 SDK**（Android 目标需额外安装 workload）：
+需要 **.NET 10 SDK** 与 Android workload：
 
 ```bash
 git clone https://github.com/akexin/TraeTools-Android.git
 cd TraeTools-Android
 
-# Windows 桌面版（多目标项目须显式指定 -f）
-dotnet build -c Release -f net10.0-windows
-
-# Android 手机版（首次需安装 Android workload，约 1.5GB）
+# 首次需安装 Android workload（约 1.5GB）
 dotnet workload install android
-dotnet publish TraeTools.csproj -c Release -f net10.0-android -o publish-android
-# 产物：publish-android/cn.akexin.traetools-Signed.apk
 
-# 非 Windows 系统（Linux/macOS）构建 Android 时需追加 -p:EnableWindowsTargeting=true
-# （多目标项目还原会一并还原 net10.0-windows，需允许下载 Windows 目标包）
+# 本地构建 / 打包（项目为单一 net10.0-android 目标，无需 -f 与 EnableWindowsTargeting）
+dotnet build TraeTools.csproj -c Release
+dotnet publish TraeTools.csproj -c Release -o publish-android
+# 产物：publish-android/cn.akexin.traetools-Signed.apk
 ```
 
 ## 使用指南
@@ -105,10 +105,11 @@ dotnet publish TraeTools.csproj -c Release -f net10.0-android -o publish-android
 
 | 方式 | 平台 | 说明 |
 |---|---|---|
-| 内嵌浏览器自动登录 | Windows | 手机号 + 验证码登录后自动读取凭证并保存，无需手工复制 |
-| 从剪贴板识别导入 | 全平台 | 先复制凭证再点此按钮；自动判定是 Token 还是会话 Cookie，并剥掉 `X-Cloudide-Session=`、`Authorization:`、成对引号、换行等外壳 |
-| 读取本机 TRAE 客户端 | Windows | 直接扫描本机 TRAE 数据目录（`%APPDATA%\TRAE*\User\`、`Local Storage\leveldb`）提取登录态，全程只读 |
-| 手动粘贴 | 全平台（手机端主路径） | 粘贴后保存，可在下拉框指定内容类型（自动识别 / Token / 会话 Cookie） |
+| 从剪贴板识别导入 | ✅ 首选 | 先在浏览器登录并复制凭证，再点此按钮；自动判定是 Token 还是会话 Cookie，并剥掉 `X-Cloudide-Session=`、`Authorization:`、成对引号、换行等外壳 |
+| 手动粘贴 | ✅ 可用 | 粘贴后保存，可在下拉框指定内容类型（自动识别 / Token / 会话 Cookie） |
+| 打开浏览器登录 | ✅ 可用 | 用系统默认浏览器打开 trae.cn 完成登录，再回到本页粘贴凭证 |
+| 读取本机 TRAE 客户端 | ⚠️ 视设备而定 | 该方式扫描的是桌面客户端的 `%APPDATA%` 数据目录，手机上通常不存在，会给出明确提示 |
+| 内嵌浏览器自动登录 | ❌ 已随 Windows 目标移除 | 依赖 WinForms + WebView2，仅桌面端可用；Android 上该按钮会提示改用上面的方式 |
 
 - 粘贴**会话 Cookie**（`X-Cloudide-Session` 的值）时，程序会用它换取 Token，并保留会话用于后续静默续期——这是手机端最省事的方式。
 - 登录态约 14 天，失效可一键静默续期。
@@ -147,7 +148,7 @@ dotnet publish TraeTools.csproj -c Release -f net10.0-android -o publish-android
 | 钉钉 | Webhook 地址、加签密钥（可选） | 机器人若启用「加签」必须填密钥，否则会被拒绝 |
 | 企业微信 | Webhook 地址 | 群机器人地址已含 key，直接粘贴完整地址 |
 | Telegram | Bot Token、Chat ID | `api.telegram.org` 在国内网络通常需代理，失败时会有明确提示 |
-| 系统本地通知 | 无 | Windows 显示在主窗口右下角；Android 走通知栏，13+ 首次开启时会申请通知权限 |
+| 系统本地通知 | 无 | 走 Android 通知栏；Android 13+ 首次开启时会申请通知权限 |
 
 > 各渠道**互不影响**：一个渠道配错不会阻断其它渠道，也不会影响签到本身；每个渠道的成败都会写进日志页。
 
@@ -201,7 +202,7 @@ dotnet publish TraeTools.csproj -c Release -f net10.0-android -o publish-android
 
 | 检查项 | 关注点 |
 |---|---|
-| 配置加密 | 凭证是否已用平台密钥加密（Windows DPAPI / Android Keystore） |
+| 配置加密 | 凭证是否已用平台密钥加密（Android Keystore） |
 | 加解密自检 | 当场做一次加密→解密往返，确认加密真的生效（不是原样写回） |
 | 明文残留 | 直接读配置文件，核对 11 个敏感字段及其账号副本是否都是密文 |
 | 设备号 | 是否 16 位数字、是否有两个账号共用同一个号 |
@@ -220,10 +221,9 @@ dotnet publish TraeTools.csproj -c Release -f net10.0-android -o publish-android
 | 签到 0 积分 | 当日已签过（重复签到不加分），或非会员当日基础 150 分已到账 |
 | Token 失效 | 程序会用 `X-Cloudide-Session` 静默换新；彻底失效时提示重新登录 |
 | Android 安装 APK 被拦截 | 系统设置中允许浏览器/文件管理「安装未知来源应用」后重试 |
-| Android 与 Windows 账号不互通 | 两端加密机制不同（DPAPI / Keystore），数据独立，需分别登录；可用「账号备份」导出后在另一端导入 |
 | 邮箱推送失败，提示认证错误 | 国内邮箱几乎都需要填**授权码**（在邮箱网页端「设置 → 账户」中生成）而不是登录密码 |
 | 切换账号后要重新登录 | 每个账号的 Token 各自独立；新加的账号需要单独登录一次，之后即可随意切换 |
-| 找不到「读取本机 TRAE 客户端」按钮 | 该方式仅 Windows 可用；未装客户端或客户端未登录时也会给出明确提示 |
+| 「读取本机 TRAE 客户端」点了没反应 | 该方式扫描的是桌面客户端的数据目录，手机上通常不存在；请改用「从剪贴板识别」或手动粘贴 |
 | Telegram 推送超时 | `api.telegram.org` 在国内网络通常不可直连，需自备代理 |
 | 深色模式没有跟着系统变 | 主题是**三态**：`设置 → 主题模式` 选「跟随系统」才会随系统切换；选「浅色 / 深色」则为固定值 |
 | 日志页一直往下跑，看不了上面的内容 | 关掉日志页右上角的「自动滚动」开关即可（偏好会记住） |
@@ -237,9 +237,9 @@ dotnet publish TraeTools.csproj -c Release -f net10.0-android -o publish-android
 
 ## 开发者
 
-- 技术栈：Avalonia 12 / .NET 10 / CommunityToolkit.Mvvm / Sodium.Core / WebView2（Windows）
-- 目录：`ViewModels/` 页面逻辑、`Services/` 网络与领域服务（`Login/` 登录导入与备份、`Notify/` 推送渠道、`KeepAlive/` 账号保活、`Security/` 安全检查、`AppLog.cs` 统一日志）、`Views/` 界面、`Models/` 数据模型、`Platform/` 跨平台抽象（DPAPI/Keystore、浏览器启动等）
-- 多目标：`net10.0-windows`（WinExe 单文件）与 `net10.0-android`（APK），平台差异集中在 `Platform/` 与 `#if ANDROID` 条件编译
+- 技术栈：Avalonia 12 / .NET 10 / CommunityToolkit.Mvvm / Sodium.Core
+- 目录：`ViewModels/` 页面逻辑、`Services/` 网络与领域服务（`Login/` 登录导入与备份、`Notify/` 推送渠道、`KeepAlive/` 账号保活、`Security/` 安全检查、`AppLog.cs` 统一日志）、`Views/` 界面、`Models/` 数据模型、`Platform/` 平台抽象（Keystore 加密、浏览器启动、崩溃日志等）
+- 目标框架：**单一 `net10.0-android`**（APK）。本项目不产出桌面端产物；`net10.0-windows` 目标与桌面专属实现（WinForms/WebView2 登录宿主、DPAPI、托盘、单文件 exe 发布）已移除
 - **主题**：`Styles/AppTheme.axaml` 用 `ThemeDictionaries` 提供 Light/Dark 两套令牌，界面一律用 `{DynamicResource XxxBrush}` 引用，不写死颜色；切换入口是 `App.ApplyThemeMode`
 - **日志**：`Services/AppLog.cs` 为唯一写入点（内存环形缓冲 + 按月分文件落盘），格式 `[时间] [级别] [账号] 消息`，向后兼容旧格式。日志分类名决定归档文件名（`{category}_log_yyyyMM.txt`），新增分类无需改读取侧
 - **保活**：`Services/KeepAlive/KeepAliveService.cs` 挂在 `MainView` 的 30 秒定时器上，与自动签到共用节拍；判定逻辑是 `TraeAccount.IsKeepAliveDue`，只换 Token 不 claim

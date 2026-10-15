@@ -11,34 +11,14 @@ permissions:
   contents: read
 
 jobs:
-  build-windows:
-    runs-on: windows-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup .NET 9
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: "10.0.x"
-
-      - name: Build Windows (Release)
-        run: dotnet build TraeTools.csproj -c Release -f net10.0-windows --nologo
-
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: trae-tools-build-windows
-          path: bin/Release/net10.0-windows/
-          if-no-files-found: error
-
+  # 纯 Android 项目：只构建 APK，不再有任何 Windows 构建作业。
   build-android:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup .NET 9
+      - name: Setup .NET 10
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
@@ -47,7 +27,13 @@ jobs:
       - name: Install Android workload
         run: dotnet workload install android
 
-      # EnableWindowsTargeting：多目标项目还原时会一并还原 net10.0-windows，
-      # ubuntu 上必须允许下载 Windows 目标包，否则报 NETSDK1100
+      # 单目标（net10.0-android）项目，不需要 EnableWindowsTargeting
       - name: Build Android (Release)
-        run: dotnet build TraeTools.csproj -c Release -f net10.0-android -p:EnableWindowsTargeting=true --nologo
+        run: dotnet build TraeTools.csproj -c Release --nologo
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: trae-tools-android-build
+          path: bin/Release/net10.0-android/
+          if-no-files-found: error

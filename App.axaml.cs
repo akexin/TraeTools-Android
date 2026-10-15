@@ -14,19 +14,6 @@ namespace TraeTools;
 // Avalonia.Application，否则与 Android.App.Application 歧义（CS0104）
 public partial class App : Avalonia.Application
 {
-    /// <summary>系统托盘图标全局引用（TrayIcon 无源头引用会被 GC 回收，故存于此；仅 Windows 桌面端使用）。</summary>
-    public static TrayIcon? TrayRef;
-
-    /// <summary>
-    /// 桌面端「系统本地通知」入口，由 MainWindow 在构造时挂上、关闭时摘掉。
-    ///
-    /// 为什么不直接调 TrayIcon：Avalonia 12 的 TrayIcon **没有** ShowNotification 方法
-    /// （该方法在 0.10 之后已移除），桌面通知统一走 WindowNotificationManager，
-    /// 它绑定在具体窗口上，因此必须由 MainWindow 提供实例。
-    /// 参数为 (标题, 正文)。Android 端不使用此委托（走原生通知栏）。
-    /// </summary>
-    public static System.Action<string, string>? DesktopNotifier;
-
     /// <summary>
     /// 应用全局主题（三态）：ThemeMode 取 "system"（跟随系统）/ "light" / "dark"，
     /// 切换 RequestedThemeVariant 后 AppTheme.axaml 的 ThemeDictionaries 令牌整体生效。
@@ -75,18 +62,9 @@ public partial class App : Avalonia.Application
         CrashLog.Boot(
             $"App.OnFrameworkInitializationCompleted lifetime={ApplicationLifetime?.GetType().FullName}");
 
-        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
-        {
-            desktop.MainWindow = new MainWindow
-            {
-                DataContext = new MainViewModel(),
-            };
-            // 配置在 MainViewModel 构造时加载：视图显示前应用保存的主题偏好（跟随系统/浅色/深色）
-            ApplyThemeMode(MainViewModel.AppConfig?.ThemeMode);
-            CrashLog.Boot("App: desktop MainWindow created");
-        }
-#if ANDROID
-        else if (ApplicationLifetime is ISingleViewApplicationLifetime singleView)
+        // 本项目为纯 Android 单视图应用：不存在桌面生命周期分支，
+        // 也不再需要 MainWindow（原桌面窗口已随 Windows 目标一并移除）。
+        if (ApplicationLifetime is ISingleViewApplicationLifetime singleView)
         {
             // 上次运行崩溃过：本次先进错误页（可复制堆栈 / 清除后重试），避免反复闪退
             var flag = CrashLog.ReadFlag();
@@ -101,7 +79,7 @@ public partial class App : Avalonia.Application
             try
             {
                 // Android：单视图生命周期，MainView（UserControl）作为根视图全屏展示。
-                // 不能用 MainWindow（Window）：单视图平台创建 Window 会抛 NotSupportedException。
+                // 注意不能用 Window：单视图平台创建 Window 会抛 NotSupportedException。
                 singleView.MainView = new MainView
                 {
                     DataContext = new MainViewModel(),
@@ -113,16 +91,14 @@ public partial class App : Avalonia.Application
             catch (System.Exception ex)
             {
                 // 主界面构建失败也不能闪退：显示可读的错误页
-                CrashLog.Write("App: create MainWindow failed", ex, true);
+                CrashLog.Write("App: create MainView failed", ex, true);
                 singleView.MainView = BuildErrorView(singleView, "界面初始化失败", ex.ToString());
             }
         }
-#endif
 
         base.OnFrameworkInitializationCompleted();
     }
 
-#if ANDROID
     /// <summary>构建启动错误页：异常堆栈 + 启动日志 + 「清除并重新加载界面」。</summary>
     private static Control BuildErrorView(
         Avalonia.Controls.ApplicationLifetimes.ISingleViewApplicationLifetime lifetime,
@@ -148,5 +124,4 @@ public partial class App : Avalonia.Application
             }
         });
     }
-#endif
 }

@@ -10,91 +10,15 @@ permissions:
   contents: write
 
 jobs:
-  publish:
-    runs-on: windows-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0          # 拉取完整历史与所有 tag，供生成"上一版本→本版本"更新差异
-          fetch-tags: true
-
-      - name: Setup .NET 9
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: "10.0.x"
-
-      # 发布单文件自包含 exe：应用内更新器（UpdaterService）会下载名为 TraeTools.exe 的资产，
-      # 直接覆盖本地 exe 后重启，因此必须产出可独立运行的单文件程序。
-      # 注意：RuntimeIdentifier(win-x64) 定义在 csproj 的 windows 条件组内，
-      # 不能在此用 -r 传入（全局属性会污染 android TFM 的还原，报 NU1102）。
-      - name: Publish (self-contained single-file win-x64)
-        run: dotnet publish TraeTools.csproj -c Release -f net10.0-windows --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish
-
-      - name: Zip distribution
-        shell: powershell
-        run: |
-          Compress-Archive -Path publish\* -DestinationPath TraeTools-win-x64.zip -Force
-          Get-ChildItem -Path publish, TraeTools-win-x64.zip | Select-Object Name, Length
-
-      # 自动生成更新摘要：取「版本号不大于当前版本」的最近一个 v* tag，
-      # 汇总其到本版本之间的全部提交（跳过 merge 提交）。
-      # 注意：仓库保留着重构前的历史 tag（如 v1.5.2.1），必须排除版本号大于当前的，否则会选错上一版本。
-      - name: Generate release notes
-        shell: bash
-        run: |
-          set -e
-          CUR="${GITHUB_REF_NAME#v}"
-          PREV=""
-          for t in $(git tag --list 'v*' --sort=-version:refname); do
-            v="${t#v}"
-            [ "$v" = "$CUR" ] && continue
-            # 四段式版本比较（v1.0.2.2 / v1.0.3）
-            gt=0
-            IFS=. read -ra A <<< "$v"; IFS=. read -ra B <<< "$CUR"
-            for i in 0 1 2 3; do
-              x=${A[$i]:-0}; y=${B[$i]:-0}
-              if (( x > y )); then gt=1; break; fi
-              if (( x < y )); then break; fi
-            done
-            [ "$gt" = "1" ] && continue   # 大于当前版本（历史遗留超前 tag）跳过
-            PREV="$t"; break
-          done
-          {
-            echo "TraeTools ${GITHUB_REF_NAME}"
-            echo ""
-            echo "- 单文件自包含 Windows x64 程序（无需额外安装 .NET 运行时）"
-            echo "- Android 手机版 APK（Android 8.0+，见 TraeTools-Android.apk）"
-            echo "- 应用内「检查更新」为**非强制**：仅提示，经用户确认后才下载安装（Windows 端后台替换，Android 端跳转下载页手动安装），可随时取消"
-            echo ""
-            if [ -n "${PREV}" ]; then
-              echo "## 更新差异（${PREV} → ${GITHUB_REF_NAME}）"
-              echo ""
-              git log --oneline --no-merges "${PREV}..HEAD" || true
-              echo ""
-              echo "> 由提交记录自动生成，完整变更请查看 Commits"
-            else
-              echo "（未找到上一版本 tag，此为首个版本）"
-            fi
-          } > release_notes.md
-          cat release_notes.md
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          name: "TraeTools ${{ github.ref_name }}"
-          body_path: release_notes.md
-          files: |
-            publish/TraeTools.exe
-            TraeTools-win-x64.zip
-          generate_release_notes: false
-
+  # 纯 Android 项目：只发布 APK。原 Windows 发布作业（单文件 exe + zip）已随 Windows 目标一并移除。
   publish-android:
     runs-on: ubuntu-latest
-    needs: publish          # 等 Windows  job 创建好 Release 后再追加 APK 资产
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # 拉取完整历史与所有 tag，供生成「上一版本→本版本」更新差异
+          fetch-tags: true
 
       - name: Setup .NET 9
         uses: actions/setup-dotnet@v4
@@ -112,11 +36,10 @@ jobs:
       # 原生库的包有要求），自行 zipalign 会把 16KB 对齐**降级**成 4KB。
       # 只做重签则完全不触碰 zip 结构，对齐策略保持不变。
       #
-      # EnableWindowsTargeting：多目标项目还原需一并还原 net10.0-windows，ubuntu 上必须显式开启
+      # 单目标（net10.0-android）项目，不需要 EnableWindowsTargeting
       - name: Publish (android apk, signed by dotnet)
         run: |
           dotnet publish TraeTools.csproj -c Release -f net10.0-android \
-            -p:EnableWindowsTargeting=true \
             -p:AndroidPackageFormat=apk \
             -p:AndroidKeyStore=true \
             -p:AndroidSigningKeyStore="$PWD/signing/traetools.keystore" \
@@ -255,9 +178,51 @@ jobs:
           print("✅ v1 + v2 + v3 三种签名方案齐全")
           PY
 
-      - name: Upload apk to Release
+      # 自动生成更新摘要：取「版本号不大于当前版本」的最近一个 v* tag，
+      # 汇总其到本版本之间的全部提交（跳过 merge 提交）。
+      # 注意：仓库保留着重构前的历史 tag（如 v1.5.2.1），必须排除版本号大于当前的，否则会选错上一版本。
+      - name: Generate release notes
+        shell: bash
+        run: |
+          set -e
+          CUR="${GITHUB_REF_NAME#v}"
+          PREV=""
+          for t in $(git tag --list 'v*' --sort=-version:refname); do
+            v="${t#v}"
+            [ "$v" = "$CUR" ] && continue
+            # 四段式版本比较（v1.0.2.2 / v1.0.3）
+            gt=0
+            IFS=. read -ra A <<< "$v"; IFS=. read -ra B <<< "$CUR"
+            for i in 0 1 2 3; do
+              x=${A[$i]:-0}; y=${B[$i]:-0}
+              if (( x > y )); then gt=1; break; fi
+              if (( x < y )); then break; fi
+            done
+            [ "$gt" = "1" ] && continue   # 大于当前版本（历史遗留超前 tag）跳过
+            PREV="$t"; break
+          done
+          {
+            echo "TraeTools ${GITHUB_REF_NAME}"
+            echo ""
+            echo "- Android 手机版 APK（Android 8.0+，见 TraeTools-Android.apk）"
+            echo "- 应用内「检查更新」为**非强制**：仅提示，经用户确认后才跳转下载页手动安装，可随时取消"
+            echo ""
+            if [ -n "${PREV}" ]; then
+              echo "## 更新差异（${PREV} → ${GITHUB_REF_NAME}）"
+              echo ""
+              git log --oneline --no-merges "${PREV}..HEAD" || true
+              echo ""
+              echo "> 由提交记录自动生成，完整变更请查看 Commits"
+            else
+              echo "（未找到上一版本 tag，此为首个版本）"
+            fi
+          } > release_notes.md
+          cat release_notes.md
+
+      - name: Create GitHub Release (APK)
         uses: softprops/action-gh-release@v2
         with:
           name: "TraeTools ${{ github.ref_name }}"
+          body_path: release_notes.md
           files: TraeTools-Android.apk
           generate_release_notes: false
