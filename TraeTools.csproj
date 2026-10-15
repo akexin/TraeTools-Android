@@ -18,7 +18,7 @@
     <SupportedOSPlatformVersion>26</SupportedOSPlatformVersion>
     <ApplicationId>cn.akexin.traetools</ApplicationId>
     <!-- android:versionCode —— 必须严格单调递增，否则无法覆盖安装。由 bump-version 工作流自增。 -->
-    <ApplicationVersion>18</ApplicationVersion>
+    <ApplicationVersion>19</ApplicationVersion>
     <AndroidPackageFormat>apk</AndroidPackageFormat>
     <AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
     <!-- 关闭 AOT 与链接器：.NET for Android 在 Release 下默认对程序集做 LLVM AOT，
