@@ -1,33 +1,47 @@
 name: CI
 
+# ⚠️ 临时验证用工作流（分支 verify-upstream-android 专属，非产品代码，验证完即删分支）。
+#
+# 目的：在 fork 上原样复现上游 star620/TraeTools 的 `android` 分支（9369fe5）的 Android 构建。
+#
+# 为什么改写的是 ci.yml 而不是用上游的 android.yml：
+#   GitHub 的 workflow_dispatch 只能触发「默认分支上已注册的 workflow」。
+#   本 fork 默认分支 main 上注册的是 ci.yml / release.yml / bump-version.yml /
+#   rotate-keystore.yml / checkin.yml，**没有 android.yml**，
+#   直接 dispatch android.yml 会 404。因此把要跑的作业写进已注册的 ci.yml。
+#
+# 只保留 workflow_dispatch 触发：避免推送该分支时误跑。
+# 不含 build-windows：本仓库是纯 Android 产品线，且验证目标只是 Android 构建。
+
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  build:
-    runs-on: windows-latest
+  build-android:
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # P2-2：主程序已升到 net10.0-windows（NativeAOT 前置）
       - name: Setup .NET 10
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
 
-      - name: Build (Release)
-        run: dotnet build TraeTools.csproj -c Release --nologo
+      # Android workload：含 Microsoft.Android SDK / OpenJDK 等构建依赖（首次安装约 5-10 分钟）
+      - name: Install Android workload
+        run: dotnet workload install android
 
-      - name: Upload build artifacts
+      # 与上游 android.yml 的 build-android 作业完全一致
+      - name: Build Android (Release)
+        run: dotnet build Android/TraeTools.Android.csproj -c Release --nologo
+
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: trae-tools-build
-          path: bin/Release/net10.0-windows/
+          name: trae-tools-android-apk
+          path: Android/bin/Release/net10.0-android/*.apk
           if-no-files-found: error
