@@ -17,7 +17,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write   # 需要 write 才能把 APK 发成 prerelease 资产（便于公开下载）
 
 jobs:
   build-android:
@@ -45,3 +45,21 @@ jobs:
           name: trae-tools-android-apk
           path: Android/bin/Release/net10.0-android/*.apk
           if-no-files-found: error
+
+      # 同时发一份到 prerelease：artifact 下载必须带令牌（本机网络下仅约 10 KB/s），
+      # 而 Release 资产是公开 URL，可经镜像加速下载，且手机上能直接点链接安装。
+      # 用固定 tag，重复跑会覆盖同一个 prerelease 的资产。
+      - name: Publish APK as prerelease asset
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: upstream-android-1.3.3-verify
+          name: "TraeTools Android（上游 android@9369fe5 构建复现）"
+          prerelease: true
+          generate_release_notes: false
+          body: |
+            上游 `star620/TraeTools` 的 `android` 分支（`9369fe5`）的 Android 构建复现产物。
+
+            - 由本仓库临时分支 `verify-upstream-android` 构建，仅用于验证「上游安卓版可构建」
+            - **调试密钥签名**（debug keystore），仅供本地验证/自测，不可用于正式分发
+            - 上游该分支本身没有正式签名配置，也从未发布过正式 Release
+          files: Android/bin/Release/net10.0-android/*.apk
